@@ -5,6 +5,6 @@ yt-dlp==2026.7.4
 # Self-hosted CPU transcription; the model is baked into the image at build time.
 faster-whisper==1.1.1
 # faster-whisper 1.1.1 imports requests (utils.py) but does not declare it.
-requests==2.32.4
+requests==2.33.0
 # SOCKS support for yt-dlp (the WARP egress tunnel is a local SOCKS5 proxy).
 pysocks==1.7.1
