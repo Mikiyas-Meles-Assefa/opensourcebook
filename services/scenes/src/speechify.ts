@@ -6,11 +6,11 @@
  * request leaves at either end and set between LEAD and TAIL like every other voice. Each request is kept on disk by
  * its words and voice, so a rewrite pays only for the scenes whose words changed.
  */
-import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { asSceneWords, placeSpeech } from "./eleven.ts";
+import { ffmpeg } from "./ffmpeg.ts";
 import { wordsOf } from "./script.ts";
 import type { Word } from "./scene.ts";
 import { sentences, VoiceDown, type Spoken, type Voice, type VoiceHealth, type VoiceTrouble } from "./voice.ts";
@@ -157,19 +157,14 @@ export function speechifyCheck(key: string, api = SPEECHIFY_API): (signal?: Abor
   };
 }
 
-function ffmpeg(args: string[], input?: Uint8Array): Buffer {
-  const r = spawnSync("ffmpeg", ["-v", "error", ...args], { input, maxBuffer: 1024 * 1024 * 1024 });
-  if (r.status !== 0) throw new Error(`ffmpeg failed: ${r.stderr.toString().slice(-600)}`);
-  return r.stdout;
-}
-
-function decode(audio: Uint8Array): Float32Array {
-  const raw = ffmpeg(["-i", "pipe:0", "-ac", "1", "-ar", String(SR), "-f", "f32le", "pipe:1"], audio);
+// ffmpeg runs without the service waiting on it, so the service keeps answering while a long narration is converted.
+async function decode(audio: Uint8Array, signal?: AbortSignal): Promise<Float32Array> {
+  const raw = (await ffmpeg(["-v", "error", "-i", "pipe:0", "-ac", "1", "-ar", String(SR), "-f", "f32le", "pipe:1"], { input: audio, signal })).stdout;
   return new Float32Array(raw.buffer, raw.byteOffset, raw.byteLength / 4).slice();
 }
 
-function writeWav(pcm: Float32Array, out: string) {
-  ffmpeg(["-y", "-f", "f32le", "-ar", String(SR), "-ac", "1", "-i", "pipe:0", out], new Uint8Array(pcm.buffer, pcm.byteOffset, pcm.byteLength));
+async function writeWav(pcm: Float32Array, out: string, signal?: AbortSignal) {
+  await ffmpeg(["-v", "error", "-y", "-f", "f32le", "-ar", String(SR), "-ac", "1", "-i", "pipe:0", out], { input: new Uint8Array(pcm.buffer, pcm.byteOffset, pcm.byteLength), signal });
 }
 
 export function speechifyVoice(o: { key?: string; tts?: SpeechifyTts; check?: (signal?: AbortSignal) => Promise<VoiceHealth>; retryMs?: number; voiceId?: string; model?: string; cacheDir?: string }): Voice {
@@ -220,7 +215,7 @@ export function speechifyVoice(o: { key?: string; tts?: SpeechifyTts; check?: (s
         let at = 0;
         for (const input of runs(wordsOf(seg.text).join(" "))) {
           const r = await request(input, seg.id, signal);
-          const pcm = decode(r.audio);
+          const pcm = await decode(r.audio, signal);
           const shift = at / SR;
           timed.push(...markWords(r.marks).map((w) => ({ text: w.text, start: w.start + shift, end: w.end + shift })));
           pieces.push(pcm);
@@ -231,7 +226,7 @@ export function speechifyVoice(o: { key?: string; tts?: SpeechifyTts; check?: (s
         for (const p of pieces) (whole.set(p, k), (k += p.length));
         const placed = placeSpeech(whole, timed, SR);
         const wav = join(folder, `${seg.id}.wav`);
-        writeWav(placed.pcm, wav);
+        await writeWav(placed.pcm, wav, signal);
         out[i] = { id: seg.id, audio: wav, words: asSceneWords(placed.words, seg.text), seconds: placed.seconds };
       };
       let next = 0;

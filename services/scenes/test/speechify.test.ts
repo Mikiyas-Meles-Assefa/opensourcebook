@@ -75,6 +75,31 @@ test("a long scene is spoken in runs and joined, its words timed in order across
   assert.ok(ordered(s!.words));
 });
 
+test("the service keeps answering while a long narration is converted", async () => {
+  // Two minutes of sound, made before the clock starts, so only the voice's own converting is timed.
+  const seconds = 120;
+  const audio = execFileSync("ffmpeg", ["-v", "error", "-f", "lavfi", "-i", `sine=frequency=220:duration=${seconds}`, "-af", "volume=0.5", "-ac", "1", "-ar", "48000", "-f", "wav", "pipe:1"], { maxBuffer: 256 * 1024 * 1024 });
+  const words = ["A", "long", "narration."];
+  const chunks: SpeechMark[] = words.map((w, i) => ({ value: w, start_time: (i * seconds * 1000) / words.length, end_time: ((i + 1) * seconds * 1000) / words.length }));
+  const tts: SpeechifyTts = async () => ({ audio, marks: { value: words.join(" "), start_time: 0, end_time: seconds * 1000, chunks } });
+  let ticks = 0;
+  const timer = setInterval(() => ticks++, 5);
+  try {
+    const [s] = await speechifyVoice({ tts }).speak([{ id: "long", text: words.join(" ") }], join(dir, "answering"));
+    assert.ok(s!.audio && existsSync(s!.audio));
+  } finally {
+    clearInterval(timer);
+  }
+  assert.ok(ticks > 3, `${ticks} ticks while the narration was converted`);
+});
+
+test("stopping the job ends the voice's converting", async () => {
+  const audio = execFileSync("ffmpeg", ["-v", "error", "-f", "lavfi", "-i", "sine=duration=1", "-ac", "1", "-ar", "48000", "-f", "wav", "pipe:1"]);
+  const stop = new AbortController();
+  const tts: SpeechifyTts = async () => (stop.abort(), { audio, marks: { value: "Hi.", start_time: 0, end_time: 1000 } });
+  await assert.rejects(speechifyVoice({ tts }).speak([{ id: "s1", text: "Hi." }], join(dir, "stopped"), stop.signal), /stopped/);
+});
+
 /** Makes every call to Speechify answer as given, counting what reached it; every other address goes through. */
 function speechifyAnswers(answer: (url: URL, init?: RequestInit) => Response): { restore: () => void; calls: { url: URL; body?: unknown; auth?: string }[] } {
   const real = globalThis.fetch;
