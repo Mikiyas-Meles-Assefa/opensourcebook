@@ -228,10 +228,11 @@ export function Thread({
 
 /**
  * The foot of a thread on a thing one of whose scenes can be made again: a
- * way to have the scene playing when the thread was opened made again, with
- * the person's last message as the note (or a note asked for here when they
- * wrote none), then that scene being made, with Stop, and Try again if it
- * failed. The thing they have stays until the new one is ready.
+ * way to have the scene playing when the thread was opened made again: a note
+ * of what should change, filled in with the person's last message when there
+ * is one and theirs to change, made only when they confirm it; then that
+ * scene being made, with Stop, and Try again if it failed. The thing they
+ * have stays until the new one is ready.
  */
 function RemakeFoot({ planId, itemId, outputId, scene, said, onGrow }: { planId: string; itemId: string; outputId: string; scene: string | undefined; said: string | undefined; onGrow: () => void }) {
   const client = useApi();
@@ -278,8 +279,8 @@ function RemakeFoot({ planId, itemId, outputId, scene, said, onGrow }: { planId:
   }
   function press() {
     setError(undefined);
-    if (said) void start(said);
-    else setAsking(true);
+    setNote(said ?? "");
+    setAsking(true);
   }
 
   const thingWord = format?.label ?? output.type;
@@ -319,6 +320,7 @@ function RemakeFoot({ planId, itemId, outputId, scene, said, onGrow }: { planId:
               }}
             />
           </label>
+          {said && <small className="tremake-hint">Your last message is the note. Change it if you like.</small>}
           <div className="tremake-row">
             <button type="button" className="link" onClick={() => setAsking(false)}>
               Cancel

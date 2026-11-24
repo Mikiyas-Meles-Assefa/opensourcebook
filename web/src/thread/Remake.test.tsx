@@ -7,8 +7,9 @@ import { renderApp } from "../test/render";
 /**
  * Remaking one scene from the thread on a video (Thread.tsx, remake.ts):
  * offered only on a thing that says it can, about the scene playing when the
- * thread was opened; the person's last message is the note, or a note is
- * asked for; it says it started, shows it being made with Stop, and a
+ * thread was opened; it always asks what should change first, filled in with
+ * the person's last message when there is one, and starts only when that is
+ * confirmed; it says it started, shows it being made with Stop, and a
  * failure with Try again; refusals say why, and a missing pick asks who.
  */
 const project = { id: "p1", title: "Cell biology", settings: {}, createdAt: now, updatedAt: now };
@@ -61,10 +62,20 @@ beforeEach(() => window.localStorage.clear());
 
 const remakes = (calls: FakeRequest[]) => calls.filter((c) => c.method === "POST" && c.path.endsWith("/remake"));
 
-test("with something said in the thread, Remake this scene makes the scene playing again with that as the note, says so, and shows it being made with Stop", async () => {
+/** Presses Remake this scene, checks nothing starts yet and the note box shows `note`, then confirms it. */
+async function remakeWith(thread: HTMLElement, calls: FakeRequest[], note: string) {
+  const before = remakes(calls).length;
+  await userEvent.click(await within(thread).findByRole("button", { name: "Remake this scene" }, { timeout: 3000 }));
+  const box = within(thread).getByRole("form", { name: "What should change?" });
+  expect(within(box).getByRole("textbox", { name: "What should change?" })).toHaveValue(note);
+  expect(remakes(calls)).toHaveLength(before);
+  await userEvent.click(within(box).getByRole("button", { name: /^Remake scene \d+$/ }));
+}
+
+test("with something said in the thread, Remake this scene asks first with that as the note, and once confirmed makes the scene playing again, says so, and shows it being made with Stop", async () => {
   const { calls, engine } = open();
   const thread = await talkAtSceneThree();
-  await userEvent.click(await within(thread).findByRole("button", { name: "Remake this scene" }));
+  await remakeWith(thread, calls, "I think the video says it the other way round.");
   await waitFor(() => expect(remakes(calls)).toHaveLength(1));
   expect(remakes(calls)[0]).toMatchObject({ path: "/v1/outputs/v1/scenes/s3/remake", body: { note: "I think the video says it the other way round." } });
   expect(await within(thread).findByText("Making scene 3 again. The video you have stays until the new one is ready.")).toBeInTheDocument();
@@ -81,12 +92,37 @@ test("with something said in the thread, Remake this scene makes the scene playi
   expect(within(thread).queryByText(/Making scene 3 again/)).not.toBeInTheDocument();
 });
 
+test("with something said in the thread, the note can be changed before it is made, and Cancel or Escape makes nothing", async () => {
+  const { calls } = open();
+  const thread = await talkAtSceneThree();
+  await userEvent.click(await within(thread).findByRole("button", { name: "Remake this scene" }));
+  let box = within(thread).getByRole("form", { name: "What should change?" });
+  expect(within(box).getByText("Your last message is the note. Change it if you like.")).toBeInTheDocument();
+  await userEvent.click(within(box).getByRole("button", { name: "Cancel" }));
+  expect(within(thread).queryByRole("form", { name: "What should change?" })).not.toBeInTheDocument();
+  await userEvent.click(within(thread).getByRole("button", { name: "Remake this scene" }));
+  await userEvent.keyboard("{Escape}");
+  expect(within(thread).queryByRole("form", { name: "What should change?" })).not.toBeInTheDocument();
+  expect(remakes(calls)).toHaveLength(0);
+  await userEvent.click(within(thread).getByRole("button", { name: "Remake this scene" }));
+  box = within(thread).getByRole("form", { name: "What should change?" });
+  const note = within(box).getByRole("textbox", { name: "What should change?" });
+  expect(note).toHaveValue("I think the video says it the other way round.");
+  await userEvent.clear(note);
+  await userEvent.type(note, "Draw the arrow the other way");
+  expect(remakes(calls)).toHaveLength(0);
+  await userEvent.click(within(box).getByRole("button", { name: "Remake scene 3" }));
+  await waitFor(() => expect(remakes(calls)[0]?.body).toEqual({ note: "Draw the arrow the other way" }));
+});
+
 test("with nothing said yet, it asks what should change and Enter sends that", async () => {
   const { calls } = open([]);
   const thread = await talkAtSceneThree();
   await userEvent.click(await within(thread).findByRole("button", { name: "Remake this scene" }));
   const box = within(thread).getByRole("form", { name: "What should change?" });
   expect(remakes(calls)).toHaveLength(0);
+  expect(within(box).getByRole("textbox", { name: "What should change?" })).toHaveValue("");
+  expect(within(box).queryByText(/Your last message is the note/)).not.toBeInTheDocument();
   expect(within(box).getByRole("button", { name: "Remake scene 3" })).toBeDisabled();
   await userEvent.type(within(box).getByRole("textbox", { name: "What should change?" }), "Show both sides pulling{Enter}");
   await waitFor(() => expect(remakes(calls)[0]?.body).toEqual({ note: "Show both sides pulling" }));
@@ -103,13 +139,13 @@ test("a thing that cannot have a scene made again offers nothing", async () => {
 
 test("a refusal says why: the engine's own words when it cannot, and that one is being made when it is", async () => {
   const words = "What this video was made from is no longer on this computer, so one scene of it can't be made again. Make the whole video again instead.";
-  const { engine } = open();
+  const { calls, engine } = open();
   const thread = await talkAtSceneThree();
   engine.refuse(409, "cannot_remake", words);
-  await userEvent.click(await within(thread).findByRole("button", { name: "Remake this scene" }));
+  await remakeWith(thread, calls, "I think the video says it the other way round.");
   expect(await within(thread).findByText(words)).toBeInTheDocument();
   engine.refuse(409, "being_made", "This video is being made now.");
-  await userEvent.click(within(thread).getByRole("button", { name: "Remake this scene" }));
+  await userEvent.click(within(thread).getByRole("button", { name: "Remake scene 3" }));
   expect(await within(thread).findByText("One is already being made. Wait for it to be ready, or stop it, then try again.")).toBeInTheDocument();
 });
 
@@ -117,7 +153,7 @@ test("with several agents ready and none picked, it asks who makes it and remake
   const { calls, engine } = open(said, { "GET /v1/providers": { ...sampleProviders, picks: {} } });
   const thread = await talkAtSceneThree();
   engine.refuse(409, "pick_needed", "Pick who makes it in Settings, What makes what.");
-  await userEvent.click(await within(thread).findByRole("button", { name: "Remake this scene" }));
+  await remakeWith(thread, calls, "I think the video says it the other way round.");
   const picker = await screen.findByRole("dialog", { name: "Made by, for videos" });
   expect(within(picker).getByText("Pick who makes this")).toBeInTheDocument();
   await userEvent.click(within(picker).getByRole("option", { name: /A One/ }));
@@ -207,7 +243,7 @@ test("a thread already open when the page opens is about the first scene the pla
   const video = await waitFor(() => playing.querySelector("video") ?? Promise.reject(new Error("no video yet")));
   Object.defineProperty(video, "currentTime", { value: 5, configurable: true });
   fireEvent.loadedMetadata(video);
-  await userEvent.click(await within(thread).findByRole("button", { name: "Remake this scene" }, { timeout: 3000 }));
+  await remakeWith(thread, calls, "I think the video says it the other way round.");
   await waitFor(() => expect(remakes(calls)[0]?.path).toBe("/v1/outputs/v1/scenes/s2/remake"));
 });
 

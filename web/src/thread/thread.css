@@ -97,6 +97,7 @@ button.tmark:hover { color: var(--text); text-decoration: underline; text-underl
 .thread .tremake-box textarea:focus { outline: 0; border-color: var(--primary); }
 .thread .tremake-box textarea::placeholder { color: var(--mutedText); }
 @media (max-width: 960px) { .thread .tremake-box textarea { font-size: 16px; } }
+.thread .tremake-hint { color: var(--mutedText); font-size: 12px; line-height: 16px; }
 .thread .tremake-row { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
 .thread .tremake-row .link { font-size: 13px; }
 .thread .tremake-said { margin: 0; color: var(--mutedText); font-size: 13px; line-height: 19px; }
