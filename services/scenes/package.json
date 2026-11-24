@@ -21,7 +21,7 @@
   "dependencies": {
     "@meta-sam/parser": "^0.1.0",
     "@napi-rs/canvas": "^1.1.1",
-    "@remotion/bundler": "4.0.539",
+    "@remotion/bundler": "4.0.546",
     "@remotion/renderer": "4.0.539",
     "katex": "0.19.1",
     "react": "19.3.1",
