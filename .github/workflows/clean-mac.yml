@@ -87,7 +87,9 @@ jobs:
           nothing_left() {
             local left=0 p
             for p in "$@"; do if kill -0 "$p" 2>/dev/null; then echo "process $p is still running: $(ps -o command= -p "$p")"; left=1; fi; done
-            if pgrep -fl "workerd|wrangler|vite|chrome-headless-shell|$GITHUB_WORKSPACE/opensourcebook/"; then echo "something of Open Sourcebook is still running"; left=1; fi
+            # Only what was started from this copy's folder, or the browser for videos from Open Sourcebook's own cache, so
+            # another process that merely shares a name is never taken for one of ours.
+            if pgrep -fl "$GITHUB_WORKSPACE/opensourcebook/|$HOME/Library/Caches/opensourcebook-scenes/"; then echo "something of Open Sourcebook is still running"; left=1; fi
             return $left
           }
           summary() {
