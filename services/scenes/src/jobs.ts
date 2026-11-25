@@ -886,7 +886,8 @@ export class Jobs {
    */
   private async viewerTurn(job: JobRecord, abort: AbortController, ctx: ToolContext, cut: Cut, kept: string): Promise<{ review?: Review; why?: string; model?: string }> {
     // The viewer's own pick when the request names one (its model and effort go with that agent alone), else the
-    // video's agent with the service's review model and effort when that agent is the service's own.
+    // video's agent with the service's review model and effort when that agent is the service's own, and otherwise
+    // the video's own model and effort.
     const own = job.request.reviewAgent ? { agent: job.request.reviewAgent, ...(job.request.reviewModel ? { model: job.request.reviewModel } : {}), ...(job.request.reviewEffort ? { effort: job.request.reviewEffort } : {}) } : undefined;
     const viewerAgent = own?.agent ?? job.request.agent;
     const status = await this.o.connector.status(false, viewerAgent);
@@ -894,6 +895,9 @@ export class Jobs {
     if (!status.reachable || status.problem) return { why: status.problem ?? "agentUnreachable" };
     const defaultStatus = !own && job.request.agent && !this.o.connector.config.agent ? await this.o.connector.status() : undefined;
     const reviewMatchesAgent = !own && (!job.request.agent || job.request.agent === (this.o.connector.config.agent ?? defaultStatus?.id));
+    const r = this.o.review;
+    const viewerModel = own ? own.model : ((reviewMatchesAgent ? r?.model : undefined) ?? job.request.model);
+    const viewerEffort = own ? own.effort : ((reviewMatchesAgent ? r?.effort : undefined) ?? job.request.effort);
     const folder = this.folder(job.id);
     const report = cut.facts && existsSync(join(folder, cut.facts)) ? await viewerReportOf(ctx, cut).catch(() => undefined) : undefined;
     const session: ViewerSession = {
@@ -911,7 +915,6 @@ export class Jobs {
     this.running.get(job.id)!.turnId = turnId;
     abort.signal.addEventListener("abort", () => this.turns.get(turnId)?.ended({ outcome: "failed", problem: "stopped" }), { once: true });
     const prompt = viewerPrompt(session);
-    const r = this.o.review;
     const started = await this.o.connector.start({
       turnId,
       systemPrompt: VIEWER_SYSTEM,
@@ -923,8 +926,8 @@ export class Jobs {
       keepAgentPrompt: this.o.keepAgentPrompt ?? !status.replacesWorkPrompt,
       ...(viewerAgent ? { agent: viewerAgent } : {}),
       target: { type: "video-review", id: job.id },
-      ...(own?.model ? { model: own.model } : reviewMatchesAgent && r?.model ? { model: r.model } : {}),
-      ...(own?.effort ? { effort: own.effort } : reviewMatchesAgent && r?.effort ? { effort: r.effort } : {}),
+      ...(viewerModel ? { model: viewerModel } : {}),
+      ...(viewerEffort ? { effort: viewerEffort } : {}),
     });
     if (!started.ok) {
       this.turns.delete(turnId);
@@ -932,8 +935,8 @@ export class Jobs {
     }
     this.stepTo(job, "A fresh viewer is watching the video");
     this.save(job);
-    const vModel = started.model ?? own?.model ?? (reviewMatchesAgent ? r?.model : undefined) ?? status.model;
-    const vEffort = started.effort ?? own?.effort ?? (reviewMatchesAgent ? r?.effort : undefined) ?? status.effort;
+    const vModel = started.model ?? viewerModel ?? status.model;
+    const vEffort = started.effort ?? viewerEffort ?? status.effort;
     this.log(`job ${job.id}: turn ${turnId} started: a fresh viewer on cut ${cut.number} (${started.agent}${vModel ? `, ${vModel}` : ""}${vEffort ? `, ${vEffort}` : ""}), a first message of about ${tokens(prompt)} tokens`);
     const t0 = Date.now();
     const beating = new AbortController();

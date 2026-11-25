@@ -302,3 +302,16 @@ test("a request's own reviewer watches on its agent, with its model and effort, 
   assert.equal(done.result.timing.review.effort, "low");
   assert.ok(done.result.timing.review.seconds >= 0);
 });
+
+test("an automatic viewer, with no review model or effort set, watches on the video's own model and effort", async () => {
+  const s = await service(async (call, start) => (isViewer(start) ? viewer([])(call) : maker(call)), { review: { on: true } });
+  assert.equal((await s.api("/videos", { method: "POST", body: body("r-auto", { model: "maker-model", effort: "high" }) })).status, 202);
+  const done = await s.until("r-auto", ["done", "failed"]);
+  assert.equal(done.state, "done", JSON.stringify(done.failure));
+  const [make, view] = s.connector.starts;
+  assert.ok(isViewer(view));
+  assert.deepEqual([make.model, make.effort], ["maker-model", "high"]);
+  assert.deepEqual([view.model, view.effort], ["maker-model", "high"]);
+  assert.equal(done.result.timing.review.model, "maker-model");
+  assert.equal(done.result.timing.review.effort, "high");
+});
