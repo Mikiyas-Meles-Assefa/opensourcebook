@@ -161,3 +161,25 @@ test("it says where the person is with the scene playing then, as soon as the fi
   expect(sceneAt(asVideo({ scenes, render }), 99)).toBe("s2");
   expect(sceneAt(asVideo({ scenes }), 1)).toBeUndefined();
 });
+
+test("a dragged progress line moves the video on release", () => {
+  const out = output("o1", { schemaVersion: 1, title: "Sky", idea: "", aspect: { width: 9, height: 16 }, scenes, render }) as unknown as PlayerProps["output"];
+  const here = vi.fn();
+  const keep = vi.fn();
+  draw(<VideoPlayer output={out} go={() => undefined} finish={null} sources={[]} here={here} keep={keep} />);
+  const player = screen.getByLabelText("Video o1") as HTMLVideoElement;
+  Object.defineProperty(player, "duration", { value: 10, configurable: true });
+  fireEvent.loadedMetadata(player);
+  Object.defineProperty(player, "currentTime", { value: 2, writable: true, configurable: true });
+  fireEvent.timeUpdate(player);
+  const line = screen.getByRole("slider", { name: "Where you are" }) as HTMLInputElement;
+  expect(line.value).toBe("200");
+  fireEvent.pointerDown(line);
+  fireEvent.input(line, { target: { value: "800" } });
+  expect(line.value).toBe("800");
+  expect(player.currentTime).toBe(2);
+  fireEvent.timeUpdate(player);
+  expect(line.value).toBe("800");
+  fireEvent.pointerUp(line);
+  expect(player.currentTime).toBe(8);
+});
