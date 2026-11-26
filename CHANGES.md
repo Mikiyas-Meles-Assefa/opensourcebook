@@ -4,6 +4,7 @@ The newest first. `opensourcebook update` prints the lines here that your copy d
 
 ## 2026-11-26
 
+- You can now drag a video's progress line to rewind or skip ahead; it follows your pointer while you drag and moves the video when you let go.
 - Open Sourcebook no longer slows your computer down while it reads a web page, and videos play without pausing every few seconds. The engine had kept trying to download a whole browser (about 150 MB) in the background, and every video seek read the whole video file again; now pages are read without that browser and a video sends only the part being played. Run `opensourcebook update` to get it.
 
 ## 2026-11-24
