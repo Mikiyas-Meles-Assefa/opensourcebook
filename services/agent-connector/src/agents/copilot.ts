@@ -90,7 +90,11 @@ export function copilotAdapter(options: CopilotOptions = {}): AgentAdapter {
     // Its own sign-in: a GitHub account in the browser.
     signIn: `${name} login`,
     // From its own install page.
-    install: { command: "npm install -g @github/copilot", url: "https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli" },
+    install: {
+        command: "npm install -g @github/copilot",
+      windowsCommand: "npm install -g @github/copilot",
+        url: "https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli",
+    },
     filesOnly: { note: COPILOT_FILES },
     // From its own docs' list of models (November 2026); `auto` lets it pick from what the plan offers.
     models: [
