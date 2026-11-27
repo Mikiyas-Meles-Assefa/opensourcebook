@@ -24,7 +24,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { Box } from "./box.ts";
 import type { AgentRegistry } from "./agents/registry.ts";
 import { marksOf } from "./agents/marks.ts";
-import type { AgentAdapter, AgentInfo } from "./agents/types.ts";
+import { installForPlatform, type AgentAdapter, type AgentInfo } from "./agents/types.ts";
 import { safeEqual } from "./net.ts";
 import { forwardModelCall } from "./model-proxy.ts";
 import { readUsageLog, USAGE_PAGE_MAX } from "./usage-log.ts";
@@ -50,6 +50,8 @@ export interface ConnectorOptions {
   usageLog?: string;
   /** The home folder a workspace is checked against; the user's own unless a test names one. */
   home?: string;
+  /** The system the install lines are for; this computer's own unless a test names one. */
+  platform?: NodeJS.Platform;
 }
 
 const MAX_BODY = 2_000_000;
@@ -116,7 +118,7 @@ export function createConnector(options: ConnectorOptions): { server: Server; tu
       if (!cached || Date.now() - cached.at > STATUS_CACHE_MS || url.searchParams.get("fresh") === "1") {
         const agents = await Promise.all(options.agents.list().map(
             async (agent) => {
-              const entry = { id: agent.id, label: agent.label, ...(agent.models?.length ? { models: agent.models } : {}), ...(agent.defaultModels?.chat || agent.defaultModels?.work ? { defaultModels: agent.defaultModels } : {}), ...(agent.defaultEfforts?.chat || agent.defaultEfforts?.work ? { defaultEfforts: agent.defaultEfforts } : {}), ...(agent.efforts?.length ? { efforts: agent.efforts } : {}), ...(agent.replacesWorkPrompt ? { replacesWorkPrompt: true } : {}), ...(agent.signIn ? { signIn: agent.signIn } : {}), ...(agent.install ? { install: agent.install } : {}), ...(await agent.info()), ...workspaceOf(agent, options.box, options.noWorkspaces) } satisfies AgentInfo & { id: string; label: string; workspace: boolean; workspaceUnavailable?: string };
+              const entry = { id: agent.id, label: agent.label, ...(agent.models?.length ? { models: agent.models } : {}), ...(agent.defaultModels?.chat || agent.defaultModels?.work ? { defaultModels: agent.defaultModels } : {}), ...(agent.defaultEfforts?.chat || agent.defaultEfforts?.work ? { defaultEfforts: agent.defaultEfforts } : {}), ...(agent.efforts?.length ? { efforts: agent.efforts } : {}), ...(agent.replacesWorkPrompt ? { replacesWorkPrompt: true } : {}), ...(agent.signIn ? { signIn: agent.signIn } : {}), ...(agent.install ? { install: installForPlatform(agent.install, options.platform ?? process.platform) } : {}), ...(await agent.info()), ...workspaceOf(agent, options.box, options.noWorkspaces) } satisfies AgentInfo & { id: string; label: string; workspace: boolean; workspaceUnavailable?: string };
               return { ...entry, ...marksOf(agent, entry.models) };
             },
           ));
