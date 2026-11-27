@@ -141,7 +141,14 @@ export interface AgentEffort {
 /** Where an agent is installed from: its own install page, and its one-line install command when it has one. */
 export interface AgentInstall {
   readonly command?: string;
+  readonly windowsCommand?: string;
   readonly url: string;
+}
+
+/** The install line for this computer: the Windows line on Windows, the usual line elsewhere; only the install page when this system has no line. */
+export function installForPlatform(install: AgentInstall, platform: NodeJS.Platform): AgentInstall { 
+      const command = platform === "win32" ? install.windowsCommand : install.command;
+    return command ? { command, url: install.url } : { url: install.url };
 }
 
 export interface AgentAdapter {
