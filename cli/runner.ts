@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { launchArgs } from "./build.ts";
 import { releasePorts } from "./ports.ts";
 import { OpenCodes, openAddress } from "./opener.ts";
+import { setupChecker } from "./check.ts";
 import { VoiceInstalls } from "./voice.ts";
 import { Phone, phoneChoice, rememberPhone } from "./phone.ts";
 import { FRONT, PROGRAMS, startOrder, url, type Program, type Wiring } from "./programs.ts";
@@ -220,7 +221,7 @@ export async function run(w: Wiring, options: RunOptions, programs: Program[] = 
   if (options.phone !== undefined) rememberPhone(w.home, options.phone);
   const ansi = Boolean(process.stdout.isTTY) && !process.env.CI;
   if (w.ports.phone && w.ports["phone-control"] && w.ports.web) {
-    phone = new Phone({ home: w.home, webPort: w.ports.web, doorPort: w.ports.phone, controlPort: w.ports["phone-control"], token: w.secrets.PHONE_TOKEN, say, ansi, openCodes, voices: new VoiceInstalls({ root: w.root, home: w.home }), reopen: (to) => openInBrowser(openAddress(frontUrl, openCodes.issue().code, to)), ...(w.keys ? { keys: w.keys } : {}) });
+    phone = new Phone({ home: w.home, webPort: w.ports.web, doorPort: w.ports.phone, controlPort: w.ports["phone-control"], token: w.secrets.PHONE_TOKEN, say, ansi, openCodes, voices: new VoiceInstalls({ root: w.root, home: w.home }), check: setupChecker(w.root), reopen: (to) => openInBrowser(openAddress(frontUrl, openCodes.issue().code, to)), ...(w.keys ? { keys: w.keys } : {}) });
     try {
       await phone.start(options.phone ?? phoneChoice(w.home));
     } catch (error) {

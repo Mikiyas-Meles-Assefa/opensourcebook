@@ -30,6 +30,7 @@ import type { Device } from "./devices.ts";
 import { DeviceStore } from "./devices.ts";
 import { openDoor, type Door } from "./door.ts";
 import type { OpenCodes, RunKeys } from "./opener.ts";
+import type { SetupRow } from "./check.ts";
 import type { VoiceInstalls } from "./voice.ts";
 import { PairingCodes } from "./pairing.ts";
 import { encodeQr, svgQr, terminalQr } from "./qr.ts";
@@ -92,6 +93,8 @@ export interface PhoneOptions {
   openCodes?: OpenCodes;
   /** The installs of voices that run on this computer, which the voice screen's button starts (cli/voice.ts). */
   voices?: VoiceInstalls;
+  /** What this computer has and lacks, for first-time setup (cli/check.ts); read only. */
+  check?: () => Promise<SetupRow[]>;
   /** Opens a fresh opening address for `to` in this computer's browser, for a tab left from an earlier run (OpenGate). */
   reopen?: (to: string) => boolean;
 }
@@ -275,6 +278,8 @@ export class Phone {
         }
         return opener.redeem(code) ? reply(200, { ok: true }) : reply(403, { error: "wrong_code", message: "That address was used or has run out." });
       }
+      // What this computer has and lacks, for first-time setup: asked fresh each time, changes nothing.
+      if (req.method === "GET" && path === "/launcher/setup-check" && this.o.check) return reply(200, { rows: await this.o.check() });
       // A voice that runs on this computer, installed from the voice screen: its state, and a start.
       const voice = /^\/launcher\/voices\/([a-z0-9-]{1,40})(\/install)?$/.exec(path);
       const voices = this.o.voices;
