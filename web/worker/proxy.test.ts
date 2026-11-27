@@ -144,6 +144,19 @@ describe("/api/launcher, to what only the launcher can do", () => {
     expect(evil.status).toBe(403);
     expect(calls).toHaveLength(1);
   });
+
+  test("asks the launcher what this computer lacks, with the phone token, and says phone_unavailable when there is no launcher", async () => {
+    const { calls, fetchImpl } = engine(200, { rows: [] });
+    const res = await proxy(new Request("https://web.test/api/launcher/setup-check", { headers: { origin: "https://web.test" } }), withPhone, fetchImpl);
+    expect(res.status).toBe(200);
+    expect(calls[0]).toMatchObject({ url: "http://127.0.0.1:5181/launcher/setup-check", init: { method: "GET" } });
+    expect(new Headers(calls[0]?.init.headers).get("x-phone-token")).toBe("phone-secret");
+    // The setup screen keys on this code to show nothing when the web app runs alone.
+    const alone = await proxy(new Request("https://web.test/api/launcher/setup-check", { headers: { origin: "https://web.test" } }), env, fetchImpl);
+    expect(alone.status).toBe(503);
+    expect(((await alone.json()) as { error: string }).error).toBe("phone_unavailable");
+    expect(calls).toHaveLength(1);
+  });
 });
 
 describe("who may use the engine through this proxy", () => {

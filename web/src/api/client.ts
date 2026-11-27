@@ -59,6 +59,7 @@ import type {
   VoiceSetup,
   VoiceServiceView,
   VoiceOption,
+  SetupCheck,
   SetupState,
   DrawingSettings,
   UploadType,
@@ -534,6 +535,11 @@ export class ApiClient {
   }
   voiceInstall(id: string): Promise<VoiceInstallState> {
     return this.request("GET", `/launcher/voices/${enc(id)}`);
+  }
+
+  // What this computer has and lacks (Node, ffmpeg, an agent, its sign-in, a voice), asked of the launcher through the proxy. Only this computer reaches it.
+  setupCheck(): Promise<SetupCheck> {
+    return this.request("GET", "/launcher/setup-check");
   }
 
   /** A harvested asset's URL, through the proxy. */
