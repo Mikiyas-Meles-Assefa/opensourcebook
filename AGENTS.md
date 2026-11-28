@@ -21,7 +21,8 @@ npm start                  # all four programs, with whatever agent you have sig
 npm run check              # what this computer is missing
 npm run status             # which programs of a running copy answer
 npm run update             # the newest version, a fast-forward only (CHANGES.md says what is new)
-npm start -- --no-open --ports-from 9100   # a private set of ports, no browser
+npm start -- --no-open --ports-from 9100   # a private set of ports, no browser (the same projects)
+npm start -- --data /tmp/osb --ports-from 9100   # a scratch copy: its own projects and settings in that folder
 ```
 
 Checks, each from its own folder (more in `CONTRIBUTING.md`):

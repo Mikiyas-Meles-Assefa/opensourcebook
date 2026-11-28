@@ -10,6 +10,8 @@ import { Empty } from "../design/ui";
 import { RowMenu } from "../design/RowMenu";
 import { DeleteProject } from "./DeleteProject";
 import { NewProjectDialog } from "./NewProjectDialog";
+import { OpenFolderTile } from "./OpenFolder";
+import { useThisComputer } from "../app/thisComputer";
 import { ExampleCard, ProjectCardFace, ProjectCardFooter } from "./StartHere";
 import { EXAMPLES } from "./examples";
 import { makingNow } from "./planStatus";
@@ -35,6 +37,8 @@ export function Home() {
   const [params, setParams] = useSearchParams();
   const search = (params.get("q") ?? "").trim();
   const [creating, setCreating] = useState(() => params.has("new"));
+  // Opening a folder links one on this computer, so it is offered only in the browser here, never on a paired phone.
+  const here = useThisComputer();
 
   const summaries = useLoad(async (): Promise<ProjectSummary[]> => {
     const projects = await client.all((q) => client.listProjects(q));
@@ -122,6 +126,7 @@ export function Home() {
       ) : (
         summaries.data && (
           <div className="grid">
+            {!search && here && <OpenFolderTile projects={list.map((s) => s.project)} />}
             {!search && (
               <button type="button" className="pc-new" onClick={() => setCreating(true)}>
                 <Icon name="plus" />
@@ -206,7 +211,7 @@ function ProjectCard({ summary, onChange, onDeleted }: { summary: ProjectSummary
         <ProjectCardFace {...(newest ? { newest } : {})} formats={formats} example={project.settings.example !== undefined} />
         <div className="pbody">
           <h3 title={project.title}>{project.title}</h3>
-          <ProjectCardFooter sources={sourceCount} made={madeCount} />
+          <ProjectCardFooter sources={sourceCount} made={madeCount} {...(project.folder ? { folder: project.folder } : {})} />
         </div>
       </Link>
       {making && (

@@ -8,7 +8,7 @@ Words on screen follow `docs/GLOSSARY.md`.
 
 ## Running it
 
-To run all of Open Sourcebook at once, run `npm start` at the repo root (`docs/DEVELOPING.md`): it starts this app with the others, with the shared secrets and ports filled in. It serves the app from a build made once after each update (`vite build` into `.opensourcebook/build/web`: the built pages and the `/api` proxy Worker, run in the local Workers runtime with nothing watched), with the engine's address and token from the launcher, never from `web/.dev.vars`; an edit here changes nothing until the next start, which builds again. **When you work on the web app, start Open Sourcebook with `npm start -- --dev`**: this app runs in `vite` and reloads as you save, and so does the engine. What follows is for working on the web app alone.
+To run all of Open Sourcebook at once, run `npm start` at the repo root (`docs/DEVELOPING.md`): it starts this app with the others, with the shared secrets and ports filled in. It serves the app from a build made once after each update (`vite build` into `state/build/web`: the built pages and the `/api` proxy Worker, run in the local Workers runtime with nothing watched), with the engine's address and token from the launcher, never from `web/.dev.vars`; an edit here changes nothing until the next start, which builds again. **When you work on the web app, start Open Sourcebook with `npm start -- --dev`**: this app runs in `vite` and reloads as you save, and so does the engine. What follows is for working on the web app alone.
 
 Node 24.
 

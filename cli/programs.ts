@@ -7,6 +7,7 @@
  * reaches the real process). Settings go in through the environment, under the names the programs already read.
  */
 import { join } from "node:path";
+import { appDataOf, engineState } from "./app-data.ts";
 import { formatEnv, namesIn, readEnvFile } from "./envfile.ts";
 import { newNameOf, settingOf, underNewNames } from "./old-names.ts";
 import { writePrivate, type Secrets } from "./secrets.ts";
@@ -32,6 +33,8 @@ export interface Wiring {
 
 /** Where the scenes service keeps its jobs and its video agent's work folders. */
 export const scenesData = (w: Wiring) => w.env.SCENES_DATA_DIR?.trim() || join(w.root, "services", "scenes", ".data");
+/** Where the scenes service keeps its job folders: SCENES_JOBS_DIR, else inside its data folder. */
+export const scenesJobs = (w: Wiring) => w.env.SCENES_JOBS_DIR?.trim() || scenesData(w);
 
 export interface Health {
   path: string;
@@ -100,6 +103,8 @@ export function engineSettings(w: Wiring): Record<string, string> {
     CHAT_AGENT_TOKEN: w.secrets.OPENSOURCEBOOK_CONNECTOR_TOKEN,
     SCENES_SERVICE_URL: url(w, "scenes"),
     SCENES_SERVICE_TOKEN: w.secrets.SCENES_TOKEN,
+    // The library and a linked folder's files, which the local runtime cannot read itself (local-files.ts).
+    ...(w.ports.files ? { LOCAL_FILES_URL: url(w, "files"), LOCAL_FILES_TOKEN: w.secrets.FILES_TOKEN } : {}),
   };
 }
 
@@ -147,7 +152,7 @@ export const PROGRAMS: Program[] = [
         OPENSOURCEBOOK_USAGE_LOG: join(w.home, "logs", "usage.jsonl"),
         // The scenes service holds a narrower token: turns only in its own folder, and only its own turns.
         OPENSOURCEBOOK_CONNECTOR_SCENES_TOKEN: w.secrets.SCENES_CONNECTOR_TOKEN,
-        OPENSOURCEBOOK_CONNECTOR_SCENES_ROOTS: scenesData(w),
+        OPENSOURCEBOOK_CONNECTOR_SCENES_ROOTS: scenesJobs(w),
       },
     }),
     health: (w) => ({ path: "/status", token: w.secrets.OPENSOURCEBOOK_CONNECTOR_TOKEN }),
@@ -172,6 +177,8 @@ export const PROGRAMS: Program[] = [
         SCENES_CONNECTOR_TOKEN: w.secrets.SCENES_CONNECTOR_TOKEN,
         SCENES_CONNECTOR_URL: url(w, "connector"),
         SCENES_PORT: String(w.ports.scenes),
+        // Where a video's job folder fetches the pictures the engine kept from its sources (docs/JOB-FOLDER.md).
+        SCENES_ENGINE_URL: url(w, "engine"),
         // The voice chosen in the app and its key: a private file in Open Sourcebook's own folder, never in git.
         SCENES_VOICE_FILE: w.env.SCENES_VOICE_FILE?.trim() || join(w.home, "voice.json"),
       },
@@ -212,7 +219,7 @@ export const PROGRAMS: Program[] = [
           "--port", String(w.ports.engine),
           "--env-file", writeEngineSettings(w),
           // Where `wrangler dev` and the launcher's migrations keep the local database, the queue and the files.
-          "--persist-to", join(".wrangler", "state"),
+          "--persist-to", appDataOf(w.env) ? engineState(join(w.root, "engine"), w.env) : join(".wrangler", "state"),
           "--compatibility-flags", "nodejs_compat",
           // The debugger stays shut unless the person developing Open Sourcebook asks for it, as with the dev server.
           ...(w.env.OPENSOURCEBOOK_ENGINE_INSPECTOR === "1" ? ["--inspector-port", String(w.ports["engine-inspector"])] : []),
@@ -235,6 +242,8 @@ export const PROGRAMS: Program[] = [
           // A package the engine uses imports node:buffer; wrangler.toml does not turn Node's modules on yet, so
           // `npm run dev` alone stops at start (the engine README's run line needs the same flag).
           "--compatibility-flags", "nodejs_compat",
+          // The app data folder's `data/` when the desktop app names one; else wrangler's own place beside the engine.
+          ...(appDataOf(w.env) ? ["--persist-to", engineState(join(w.root, "engine"), w.env)] : []),
         ],
         env: { WRANGLER_SEND_METRICS: "false" },
       };

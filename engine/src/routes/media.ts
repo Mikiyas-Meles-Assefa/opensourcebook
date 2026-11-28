@@ -11,7 +11,7 @@
  */
 import { assetKeyForId } from "../assets";
 import { authenticate, errorResponse, json, notFound } from "../http";
-import { contentTypeForName, MAX_UPLOAD_BYTES, normalizeUploadContentType, sanitizeUploadFilename, UPLOAD_TYPES } from "../uploads";
+import { contentTypeForName, folderExtensions, MAX_UPLOAD_BYTES, normalizeUploadContentType, sanitizeUploadFilename, UPLOAD_TYPES } from "../uploads";
 import type { EngineDeps } from "../wiring";
 
 export async function createUpload(request: Request, deps: EngineDeps): Promise<Response> {
@@ -33,11 +33,14 @@ export async function createUpload(request: Request, deps: EngineDeps): Promise<
   return json({ upload }, 201);
 }
 
-/** `GET /v1/uploads/types`: what `POST /v1/uploads` takes, by type, file name ending and group. */
+/**
+ * `GET /v1/uploads/types`: what `POST /v1/uploads` takes, by type, file name ending and group, and the endings a
+ * linked folder's files are taken by (`folderExtensions`, which the launcher's watching of a folder goes by).
+ */
 export async function uploadTypes(request: Request, deps: EngineDeps): Promise<Response> {
   const auth = await authenticate(request, deps.clientToken);
   if ("response" in auth) return auth.response;
-  return json({ maxBytes: MAX_UPLOAD_BYTES, types: UPLOAD_TYPES.map((type) => ({ contentType: type.contentType, extensions: [...type.extensions], group: type.group })) });
+  return json({ maxBytes: MAX_UPLOAD_BYTES, types: UPLOAD_TYPES.map((type) => ({ contentType: type.contentType, extensions: [...type.extensions], group: type.group })), folderExtensions: folderExtensions() });
 }
 
 /** The groups of the list, in its order, as one plain phrase ("PDF, slides, docs and audio"). */

@@ -38,15 +38,26 @@ export function ProjectCardFace({
   );
 }
 
-/** Fixed footer shared by every card in the projects grid: sources and things made in total. */
-export function ProjectCardFooter({ sources, made }: { sources: number; made: number }) {
+/**
+ * Fixed footer shared by every card in the projects grid: its sources and things made in total. A project opened from
+ * a folder shows that folder and that it is kept in step with it, in place of the count of its sources.
+ */
+export function ProjectCardFooter({ sources, made, folder }: { sources: number; made: number; folder?: string }) {
   return (
     <div className="pfoot">
-      <span className="pstat" title={`${sources} ${sources === 1 ? "source" : "sources"}`}>
-        <Icon name="page" />
-        {sources}
-        <span className="sr-only"> {sources === 1 ? "source" : "sources"}</span>
-      </span>
+      {folder ? (
+        <span className="pstat pfolder" title={folder}>
+          <Icon name="folder" />
+          <span className="ppath">{folder}</span>
+          <span className="psynced">Synced</span>
+        </span>
+      ) : (
+        <span className="pstat" title={`${sources} ${sources === 1 ? "source" : "sources"}`}>
+          <Icon name="page" />
+          {sources}
+          <span className="sr-only"> {sources === 1 ? "source" : "sources"}</span>
+        </span>
+      )}
       <span className="pstat" title={`${made} ${made === 1 ? "item made" : "items made"}`}>
         <Icon name="layers" />
         {made}
