@@ -9,7 +9,7 @@
 import type { ConditionRegistry } from "../../studio/conditions";
 import type { FormatRegistry } from "../../studio/registry";
 import type { Plan, Source, StudioRepositories } from "../../studio/repositories";
-import type { NodeSource } from "../../studio/types";
+import type { NodeSource, PicksByScope } from "../../studio/types";
 import type { TurnSource } from "../context";
 import { checkDraft, estimate, settle, type DraftPlan, type DraftServices, type Settled } from "./draft";
 import { applyOps, readPlan, type HandItems, type PlanSnapshot } from "./edit";
@@ -106,19 +106,20 @@ export async function commitAppend(raw: unknown, plan: Plan, map: SourceMap, ser
   return { added: added.size, stages: new Set(read.draft.items.map((item) => item.level)).size, settled };
 }
 
-/** Remembered agent/model/effort picks by scope for this owner; undefined when none are saved. */
+/** Remembered picks by scope for this owner, with a reviewer's `off` on its review scope; undefined when none are saved. */
 export async function picksByScope(
   repos: StudioRepositories,
   ownerId: string,
-): Promise<Record<string, { agent?: string; model?: string; effort?: string }> | undefined> {
+): Promise<PicksByScope | undefined> {
   const list = await repos.providerSettings.listPicks(ownerId);
   if (list.length === 0) return undefined;
-  const picks: Record<string, { agent?: string; model?: string; effort?: string }> = {};
+  const picks: PicksByScope = {};
   for (const p of list) {
     picks[p.scope] = {
       ...(p.agent ? { agent: p.agent } : {}),
       ...(p.model ? { model: p.model } : {}),
       ...(p.effort ? { effort: p.effort } : {}),
+      ...(p.off ? { off: p.off } : {}),
     };
   }
   return picks;
@@ -132,7 +133,7 @@ export function draftServicesFor(input: {
   projectSources: Source[];
   /** Sources already read this turn. */
   sources: TurnSource[];
-  picks?: Record<string, { agent?: string; model?: string; effort?: string }>;
+  picks?: PicksByScope;
 }): DraftServices {
   const { repos } = input;
   const loaded = new Map<string, NodeSource | undefined>(input.sources.map((source) => [source.sourceId, { ...source, range: undefined }]));

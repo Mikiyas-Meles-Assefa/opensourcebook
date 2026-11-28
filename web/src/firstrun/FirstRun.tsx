@@ -8,6 +8,7 @@ import { Icon } from "../design/Icon";
 import { Logo } from "../design/ui";
 import { firstStep } from "./rules";
 import { ProvidersStep } from "./ProvidersStep";
+import { SetupCheck } from "./SetupCheck";
 import { TryStep } from "./TryStep";
 import { VoiceStep } from "./VoiceStep";
 import "./firstrun.css";
@@ -76,6 +77,7 @@ export function FirstRun() {
       <main className="fr-main">
         <div className="fr-col">
           <Stepper at={at} />
+          {known.id === "providers" && <SetupCheck />}
           {known.id === "providers" && <ProvidersStep onConnected={setConnected} onNext={() => go("voice")} />}
           {known.id === "voice" && <VoiceStep onBack={() => go("providers")} onNext={() => go("try")} />}
           {known.id === "try" && <TryStep onBack={() => go("voice")} />}

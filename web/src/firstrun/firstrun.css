@@ -38,6 +38,16 @@
 .fr-ok { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--successText); }
 .fr-ok .ico { width: 13px; height: 13px; }
 
+.fr-chead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-12); padding: 14px 16px; }
+.fr-chead h2 { font-size: 16px; line-height: 22px; }
+.fr-chead .obtn { padding: 5px 12px; font-size: 12px; line-height: 16px; }
+.fr-mark { width: 32px; height: 32px; flex: none; border-radius: 9px; display: grid; place-items: center; background: var(--fill); color: var(--mutedText); }
+.fr-mark .ico { width: 15px; height: 15px; }
+.fr-mark.ok { background: var(--successSoft); color: var(--successText); }
+.fr-mark.missing { background: var(--dangerSoft); color: var(--danger); }
+.fr-opt { flex: none; font-size: 12px; line-height: 16px; font-weight: 600; color: var(--mutedText); }
+.fr-detail { margin: 0 16px 12px 60px; font-size: 12px; line-height: 19px; color: var(--mutedText); overflow-wrap: anywhere; }
+
 .fr-how { margin: 0 16px 16px; padding: 12px 14px; border-radius: 12px; background: var(--bg); box-shadow: 0 0 0 1px var(--border); display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-8); }
 .fr-how b { font-size: 13px; }
 .fr-how ol { margin: 0; padding-left: 18px; font-size: 12px; line-height: 19px; color: var(--mutedText); }
@@ -83,4 +93,6 @@
   .fr-foot .fr-next { flex: 1 0 100%; padding: 13px 16px; font-size: 15px; line-height: 20px; order: 5; }
   .fr-foot .obtn { order: 1; }
   .fr-line { padding: 12px 0; }
+  .fr-chead { padding: 0 4px 10px; }
+  .fr-detail { margin: 0 12px 12px 56px; }
 }

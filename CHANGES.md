@@ -2,12 +2,18 @@
 
 The newest first. `opensourcebook update` prints the lines here that your copy did not have yet, so each line is written for a person using Open Sourcebook: what they can now do or will notice, in a sentence. How to add one is in `CONTRIBUTING.md`.
 
+## 2026-11-28
+
+- Setting a video's reviewer to off now stops its fresh viewer turn, and a reviewer you picked watches the finished video on that agent, model and effort.
+
 ## 2026-11-27
 
 - On Windows, setup now shows the Windows install line for each agent instead of the Mac and Linux one; an agent with no Windows line shows its install page instead.
+- First-time setup now starts with a short list of what your computer has and what it still needs: Node, ffmpeg, a coding agent, its sign-in and a voice. Each row says where it stands, and Check again looks once more after you change something.
 
 ## 2026-11-26
 
+- You can now drag a video's progress line to rewind or skip ahead; it follows your pointer while you drag and moves the video when you let go.
 - Open Sourcebook no longer slows your computer down while it reads a web page, and videos play without pausing every few seconds. The engine had kept trying to download a whole browser (about 150 MB) in the background, and every video seek read the whole video file again; now pages are read without that browser and a video sends only the part being played. Run `opensourcebook update` to get it.
 
 ## 2026-11-24

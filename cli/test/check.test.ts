@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { agentLines, gather, chromeLine, ffmpegLine, lines, nodeLine, packagesLine, render, voiceLine, webDevVarsLine, type AgentFacts, type Facts } from "../check.ts";
+import { agentLines, gather, chromeLine, ffmpegLine, lines, nodeLine, packagesLine, render, setupChecker, setupRows, voiceLine, webDevVarsLine, type AgentFacts, type Facts } from "../check.ts";
 
 // Read as the launcher reads it, at run time: the scenes service is its own program with its own checks.
 const { NO_KEY_NOTE } = (await import("../../services/scenes/src/voice-choice.ts" as string)) as { NO_KEY_NOTE: string };
@@ -127,4 +127,68 @@ test("the whole check never mentions a stand-in mode and renders one line each",
   assert.match(text, /^ {2}ok {4}Node 24\.1\.0$/m);
   assert.match(text, /^ {2}fix {3}ffmpeg is missing/m);
   assert.doesNotMatch(text, /\n\s+at /, "no stack trace");
+});
+
+const complete: Facts = { platform: "linux", node: "24.1.0", ffmpeg: "7.1", agents: [claude, codex], voice: {}, chrome: "/x/chrome", missingPackages: [], webDevVars: false };
+const row = (f: Facts, id: string) => setupRows(f).find((r) => r.id === id)!;
+
+test("setup rows: a computer with everything has five rows, all ok, in the order they are needed", () => {
+  const rows = setupRows(complete);
+  assert.deepEqual(rows.map((r) => [r.id, r.state]), [["node", "ok"], ["ffmpeg", "ok"], ["agent", "ok"], ["signin", "ok"], ["voice", "ok"]]);
+  assert.equal(row(complete, "agent").text, "Claude Code 2.1.0");
+  assert.equal(row(complete, "signin").text, "Claude Code can answer");
+  assert.ok(rows.every((r) => r.detail === undefined && r.optional === undefined), "nothing to do, nothing said");
+});
+
+test("setup rows: Node too old and ffmpeg missing say what is missing, with the words `check` prints as the detail", () => {
+  const old = row({ ...complete, node: "22.4.0" }, "node");
+  assert.deepEqual([old.state, old.text, old.detail], ["missing", "Node 22.4.0 is too old", nodeLine("22.4.0").text]);
+  const none = row({ ...complete, ffmpeg: null, platform: "win32" }, "ffmpeg");
+  assert.deepEqual([none.state, none.text], ["missing", "ffmpeg is missing, so videos can't be made"]);
+  assert.match(none.detail!, /winget install ffmpeg/);
+});
+
+test("setup rows: no agent installed, and the sign-in waits for one", () => {
+  const f: Facts = { ...complete, agents: [{ ...claude, installed: false }, codex] };
+  assert.deepEqual([row(f, "agent").state, row(f, "agent").text], ["missing", "No coding agent is installed"]);
+  assert.match(row(f, "agent").detail!, /install Claude Code and sign in with `claude auth login`/);
+  assert.deepEqual([row(f, "signin").state, row(f, "signin").text], ["waiting", "Waiting for a coding agent"]);
+});
+
+test("setup rows: installed but not signed in is the sign-in row, and an API key counts as ready", () => {
+  const out: Facts = { ...complete, agents: [{ ...claude, signedIn: false }, codex] };
+  assert.equal(row(out, "agent").state, "ok");
+  const signin = row(out, "signin");
+  assert.deepEqual([signin.state, signin.text], ["missing", "Claude Code is installed but not signed in"]);
+  assert.equal(signin.detail, "Claude Code: run `claude auth login` in a terminal.");
+  const onKey: Facts = { ...complete, agents: [{ ...claude, signedIn: false, apiKey: true, note: "On a key." }, codex] };
+  assert.equal(row(onKey, "signin").state, "ok");
+});
+
+test("setup rows: an agent installed that cannot answer yet is not counted, and a failure to ask is a row, not a crash", () => {
+  const f: Facts = { ...complete, agents: [{ ...codex, installed: true, version: "0.1" }] };
+  assert.deepEqual([row(f, "agent").state, row(f, "agent").text], ["missing", "No installed coding agent can answer yet"]);
+  const broke = setupRows({ ...complete, agents: { error: "boom" } });
+  assert.deepEqual(broke.map((r) => r.state), ["ok", "ok", "missing", "waiting", "ok"]);
+  assert.equal(broke[2]!.detail, "boom");
+});
+
+test("setup rows: no voice is optional and says videos have no sound; a wrong voice setting is not optional", () => {
+  const none = row({ ...complete, voice: { note: NO_KEY_NOTE } }, "voice");
+  assert.deepEqual([none.state, none.optional, none.text, none.detail], ["missing", true, "No voice yet: videos are made without sound", NO_KEY_NOTE]);
+  const wrong = row({ ...complete, voice: { problem: "SCENES_VOICE=robot is not a voice" } }, "voice");
+  assert.deepEqual([wrong.state, wrong.optional, wrong.text], ["missing", undefined, "The voice setting is wrong"]);
+  assert.match(wrong.detail!, /SCENES_VOICE=robot/);
+  assert.equal(row({ ...complete, voice: { kind: "kokoro" } }, "voice").text, "Voice: Kokoro, on this computer");
+});
+
+test("setup checker: asks this computer, and answers many askers at once with one look", async () => {
+  const root = join(import.meta.dirname, "..", "..");
+  const check = setupChecker(root, { PATH: process.env.PATH, ELEVENLABS_API_KEY: "" });
+  const first = check();
+  assert.strictEqual(check(), first, "a second ask while one is running gets the same answer");
+  const rows = await first;
+  assert.deepEqual(rows.map((r) => r.id), ["node", "ffmpeg", "agent", "signin", "voice"]);
+  assert.equal(rows.find((r) => r.id === "voice")!.optional, true, "no key, no voice");
+  assert.notStrictEqual(check(), first, "once it has answered, the next ask looks again");
 });

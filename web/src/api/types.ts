@@ -1161,6 +1161,23 @@ export interface PairedDevice {
 /** An install of a voice that runs on this computer, as the launcher runs it (cli/voice.ts). */
 export type VoiceInstallState = { voice: string } & ({ state: "idle" } | { state: "installing"; since: string } | { state: "done" } | { state: "failed"; message: string });
 
+/** One thing this computer needs, as the launcher reports it for first-time setup (cli/check.ts). */
+export interface SetupRow {
+  id: "node" | "ffmpeg" | "agent" | "signin" | "voice" | (string & {});
+  label: string;
+  /** `waiting` needs the row before it first (an agent has to be installed to be signed in to). */
+  state: "ok" | "missing" | "waiting" | (string & {});
+  text: string;
+  /** What to do about it, in words, until the app does it with a button. */
+  detail?: string;
+  /** Open Sourcebook works without it (a voice: videos are made without sound). */
+  optional?: boolean;
+}
+
+export interface SetupCheck {
+  rows: SetupRow[];
+}
+
 export interface PhoneStatus {
   /** Whether phones on the home network may open Open Sourcebook (once paired). */
   on: boolean;

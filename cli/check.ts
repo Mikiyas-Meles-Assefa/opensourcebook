@@ -29,7 +29,7 @@ export interface AgentFacts {
 }
 
 /** It can answer the chat: installed, nothing in the way, and signed in, or on a key, or with no sign-in to ask about. */
-const canAnswer = (a: AgentFacts) => a.installed && !a.unavailable && (a.signedIn !== false || !!a.apiKey);
+export const canAnswer = (a: AgentFacts) => a.installed && !a.unavailable && (a.signedIn !== false || !!a.apiKey);
 
 export interface Facts {
   platform: NodeJS.Platform;
@@ -130,6 +130,70 @@ export function lines(f: Facts): Line[] {
     packagesLine(f.missingPackages),
     webDevVarsLine(f.webDevVars),
   ].filter((l): l is Line => Boolean(l));
+}
+
+export type RowId = "node" | "ffmpeg" | "agent" | "signin" | "voice";
+/** `waiting` is a row that needs the one before it first (an agent has to be there to be signed in to). */
+export type RowState = "ok" | "missing" | "waiting";
+
+/** One thing this computer needs, as the app's setup screen shows it (`GET /launcher/setup-check`). */
+export interface SetupRow {
+  id: RowId;
+  label: string;
+  state: RowState;
+  /** One plain line on where it stands. */
+  text: string;
+  /** What to do about it until the app does it with a button: the words `opensourcebook check` prints. */
+  detail?: string;
+  /** Open Sourcebook works without it (a voice: videos are made without sound). */
+  optional?: boolean;
+}
+
+/** The five things a person needs, in the order they are needed, from the same facts and words as `lines`. */
+export function setupRows(f: Facts): SetupRow[] {
+  const node = nodeLine(f.node);
+  const ffmpeg = ffmpegLine(f.ffmpeg, f.platform);
+  const voice = voiceLine(f.voice);
+  return [
+    node.status === "ok"
+      ? { id: "node", label: "Node", state: "ok", text: node.text }
+      : { id: "node", label: "Node", state: "missing", text: `Node ${f.node} is too old`, detail: node.text },
+    ffmpeg.status === "ok"
+      ? { id: "ffmpeg", label: "ffmpeg", state: "ok", text: ffmpeg.text }
+      : { id: "ffmpeg", label: "ffmpeg", state: "missing", text: "ffmpeg is missing, so videos can't be made", detail: ffmpeg.text },
+    ...agentRows(f.agents),
+    voice.status === "ok"
+      ? { id: "voice", label: "Voice", state: "ok", text: voice.text }
+      : voice.notice
+        ? { id: "voice", label: "Voice", state: "missing", optional: true, text: "No voice yet: videos are made without sound", detail: voice.text }
+        : { id: "voice", label: "Voice", state: "missing", text: "The voice setting is wrong", detail: voice.text },
+  ];
+}
+
+/** The agent row and the sign-in row: a sign-in only means something once an agent that can answer is installed. */
+function agentRows(agents: Facts["agents"]): SetupRow[] {
+  const waiting: SetupRow = { id: "signin", label: "Agent sign-in", state: "waiting", text: "Waiting for a coding agent" };
+  if (!Array.isArray(agents)) {
+    return [{ id: "agent", label: "Coding agent", state: "missing", text: "Couldn't ask which coding agents are installed", detail: agents.error }, waiting];
+  }
+  const label = (a: AgentFacts) => a.label;
+  const usable = agents.filter((a) => a.installed && !a.unavailable);
+  if (!usable.length) {
+    const named = agents.some((a) => a.installed) ? "No installed coding agent can answer yet" : "No coding agent is installed";
+    const detail = agentLines(agents).find((l) => l.status === "missing")?.text;
+    return [{ id: "agent", label: "Coding agent", state: "missing", text: named, ...(detail ? { detail } : {}) }, waiting];
+  }
+  const agent: SetupRow = { id: "agent", label: "Coding agent", state: "ok", text: listed(usable.map((a) => `${a.label}${a.version ? ` ${a.version}` : ""}`)) };
+  const ready = usable.filter(canAnswer);
+  if (ready.length) return [agent, { id: "signin", label: "Agent sign-in", state: "ok", text: `${listed(ready.map(label))} can answer` }];
+  const how = usable.map((a) => `${a.label}: run \`${a.signIn ?? `${a.id} login`}\` in a terminal.`).join(" ");
+  return [agent, { id: "signin", label: "Agent sign-in", state: "missing", text: `${listed(usable.map(label))} ${usable.length === 1 ? "is" : "are"} installed but not signed in`, detail: how }];
+}
+
+/** The setup check as the launcher serves it: the facts are gathered once at a time, however many ask at once. */
+export function setupChecker(root: string, env: NodeJS.ProcessEnv = process.env): () => Promise<SetupRow[]> {
+  let running: Promise<SetupRow[]> | undefined;
+  return () => (running ??= gather(root, env).then(setupRows).finally(() => void (running = undefined)));
 }
 
 const MARK: Record<Status, string> = { ok: "ok  ", note: "note", missing: "fix " };

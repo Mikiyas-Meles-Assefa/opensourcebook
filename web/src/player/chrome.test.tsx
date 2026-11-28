@@ -1,8 +1,8 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useEffect, useState, type ReactNode } from "react";
 import { MemoryRouter } from "react-router";
-import { ChromeSlot, ChromeTools, PlayerChrome, type ChromeReport } from "./chrome";
+import { ChromeSlot, ChromeTools, PlayerChrome, ProgressLine, type ChromeReport } from "./chrome";
 import { useChrome, type Segment } from "./useChrome";
 
 /** A player that says what it is given and listens for up and down itself, as an older one might. */
@@ -83,4 +83,31 @@ test("outside a chrome a player's tools are not drawn", () => {
     </MemoryRouter>,
   );
   expect(screen.queryByRole("button", { name: "Change it" })).not.toBeInTheDocument();
+});
+
+test("the progress line keeps its place while it is dragged", () => {
+  const onSeek = vi.fn();
+  const { rerender } = render(<ProgressLine progress={0.2} onSeek={onSeek} />);
+  const line = screen.getByRole("slider", { name: "Where you are" }) as HTMLInputElement;
+  expect(line.value).toBe("200");
+  fireEvent.pointerDown(line);
+  fireEvent.input(line, { target: { value: "800" } });
+  expect(line.value).toBe("800");
+  expect(onSeek).not.toHaveBeenCalled();
+  rerender(<ProgressLine progress={0.2} onSeek={onSeek} />);
+  expect(line.value).toBe("800");
+  fireEvent.pointerUp(line);
+  expect(onSeek).toHaveBeenCalledTimes(1);
+  expect(onSeek).toHaveBeenCalledWith(0.8);
+  rerender(<ProgressLine progress={0.8} onSeek={onSeek} />);
+  expect(line.value).toBe("800");
+});
+
+test("the keyboard seeks at once", () => {
+  const onSeek = vi.fn();
+  render(<ProgressLine progress={0.2} onSeek={onSeek} />);
+  const line = screen.getByRole("slider", { name: "Where you are" }) as HTMLInputElement;
+  fireEvent.input(line, { target: { value: "201" } });
+  expect(onSeek).toHaveBeenCalledTimes(1);
+  expect(onSeek).toHaveBeenCalledWith(0.201);
 });
