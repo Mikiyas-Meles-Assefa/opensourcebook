@@ -153,7 +153,7 @@ A setting written under its name from before the rename (`RE_CONNECTOR_TOKEN`, `
 | `OPENSOURCEBOOK_ANTHROPIC_API_KEY` | (none) | An Anthropic API key of yours, for Claude Code when it is not signed in and for its boxed workspaces (see "API keys"). Never a subscription token. |
 | `OPENSOURCEBOOK_OPENAI_API_KEY` | (none) | An OpenAI API key of yours, the same for Codex. |
 | `OPENSOURCEBOOK_GEMINI_API_KEY` | (none) | A Gemini API key of yours (Google AI Studio), only for Antigravity's boxed workspaces. |
-| `OPENSOURCEBOOK_USAGE_LOG` | `.opensourcebook/logs/usage.jsonl` in the state folder | Path to the JSONL file where every finished turn's usage is appended (`off`, `none` or `0` turns it off), and read back by `GET /usage`.  The launcher hands the path over; started by hand, the connector looks in `OPENSOURCEBOOK_STATE`, else this copy's `.opensourcebook`, else its `.re` if only that one is there. |
+| `OPENSOURCEBOOK_USAGE_LOG` | `logs/usage.jsonl` in the state folder | Path to the JSONL file where every finished turn's usage is appended (`off`, `none` or `0` turns it off), and read back by `GET /usage`.  The launcher hands the path over; started by hand, the connector looks in `OPENSOURCEBOOK_STATE`, else this copy's `.opensourcebook`, else its `.re` if only that one is there. |
 
 ## Routes
 

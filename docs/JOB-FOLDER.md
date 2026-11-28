@@ -20,7 +20,7 @@ Open Sourcebook keeps its data in one folder of its own, the app data folder, ne
 | `jobs/` | One job folder per video, and nothing else | `SCENES_JOBS_DIR` |
 | `scenes/` | The scenes service's other files: `audio/`, the voice's caches (`.voice`, `.kit`), style previews, `speed.json` | `SCENES_DATA_DIR` |
 
-The launcher sets them from one setting, `OPENSOURCEBOOK_APP_DATA`, the app data folder. Without it (a clone started with `npm start`) everything stays where it was: `.opensourcebook/` at the repo root, `engine/.wrangler/state` and `services/scenes/.data`, which holds the job folders too, as `SCENES_JOBS_DIR` left unset is `SCENES_DATA_DIR` itself.
+The launcher sets them from one setting, `OPENSOURCEBOOK_APP_DATA`, the app data folder. Every copy uses the same one: the desktop app names it, and the one-line install and a clone started with `npm start` use the system's own place for it (`~/Library/Application Support/Open Sourcebook` on a Mac, `docs/DEVELOPING.md`) unless `--data <folder>` or the setting names another. A clone's folders from before that (`.opensourcebook/` at the repo root, `engine/.wrangler/state` and `services/scenes/.data`, which held the job folders too) are moved in once, the job folders to `jobs/`, when the app data folder has no projects yet; otherwise they are left for the person to delete.
 
 ## What a job folder holds
 

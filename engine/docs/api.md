@@ -2158,7 +2158,7 @@ scenes service on this computer (`services/scenes/src/voices.ts`, the one list
 of voice services); the engine passes each call on through `ScenesClient`
 and reads each answer field by field, so nothing the service did not mean to
 say reaches the browser. The choice and the key are kept by the scenes
-service in a private file on this computer (`SCENES_VOICE_FILE`, `.opensourcebook/voice.json`
+service in a private file on this computer (`SCENES_VOICE_FILE`, `state/voice.json` in the app data folder
 under the launcher), written for its owner alone and laid over
 `services/scenes/.env`, which keeps working. **A key goes in and never comes
 back**: answers say only `keySet` and `keyHint`, its last four characters

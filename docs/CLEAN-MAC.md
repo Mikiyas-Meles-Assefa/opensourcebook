@@ -54,7 +54,7 @@ Checking this computer
   note  The browser that draws videos is not downloaded yet; starting Open Sourcebook downloads it once (about 180 MB to download, about half a gigabyte once unpacked).
   note  What the Agent connector, Video scenes, Engine, Web app need is not installed yet; starting Open Sourcebook installs it once (a few minutes).
   Installing 4 parts of Open Sourcebook (first run, a few minutes): done in 8s
-  Made the passwords Open Sourcebook's programs use to talk to each other, once. They are kept in .opensourcebook/secrets.json, which only you can read and which is never committed.
+  Made the passwords Open Sourcebook's programs use to talk to each other, once. They are kept in /Users/you/Library/Application Support/Open Sourcebook/state/secrets.json, which only you can read and which is never committed.
   Downloading the browser that draws videos (once; about 180 MB to download, about half a gigabyte once unpacked): done
   Setting up where your projects are kept (a database on this computer): done
 
