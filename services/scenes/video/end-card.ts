@@ -19,6 +19,12 @@ export const LEAST = 36;
 const READ_WORDS_PER_SECOND = 3;
 const GLANCE_SECONDS = 1.5;
 export const CARD_SECONDS = { least: 5, most: 7 };
+/**
+ * How far the card rises over its time on screen, in pixels of a 1920 tall frame. It holds for 5 to 7 s, often with no
+ * music under it, and a picture that stands still and silent that long reads as a frozen video; a slow, even rise keeps
+ * it alive without making it harder to read, and it starts in place, so the first frame is as legible as the last.
+ */
+export const CARD_RISE = 40;
 
 export type CardLine = { text: string; size: number; role: "title" | "heading" | "source" | "credit" | "more"; gap: number };
 
@@ -116,6 +122,12 @@ export function cardLines(c: Credits, upperTitle = false): CardLine[] {
 /** Line height on the card, as a share of the size. */
 export const LEADING = 1.25;
 export const heightOf = (lines: CardLine[]) => lines.reduce((h, l) => h + l.size * LEADING + l.gap, 0);
+
+/** How far the card has risen at `frame` of its `frames`: 0 on its first frame, `CARD_RISE` on its last, evenly between, so it never stops. */
+export function cardRise(frame: number, frames: number): number {
+  if (frames <= 1) return 0;
+  return (CARD_RISE * Math.min(Math.max(frame, 0), frames - 1)) / (frames - 1);
+}
 
 /** How long the card stays: long enough to read its title and sources at three a second after a glance (picture credits are there to be found, not read through), from 5 to 7 s. */
 export function cardSeconds(c: Credits): number {
