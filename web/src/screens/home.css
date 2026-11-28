@@ -57,6 +57,18 @@
 .pc-new:hover { border-color: var(--primary); background: var(--primaryGhost); color: var(--text); }
 .pc-new:hover .ico { color: var(--primaryText); }
 
+/* "Open a folder", the first card: the same plus card, a touch stronger. */
+.pc-new-wrap { display: flex; flex-direction: column; gap: var(--space-8); }
+.pc-new-wrap .pc-new { flex: 1; }
+.pc-new.main { border-style: solid; border-color: var(--primary); color: var(--text); }
+.pc-new.main .ico { color: var(--primaryText); }
+.pc-folder { display: flex; flex-direction: column; gap: var(--space-8); padding: 14px; min-height: 160px; }
+.pc-folder-head { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.pc-folder-head .ico { width: 16px; height: 16px; color: var(--primaryText); }
+.pfoot .pfolder { min-width: 0; flex: 1; }
+.pfoot .ppath { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pfoot .psynced { flex: none; padding: 0 6px; border-radius: 999px; background: var(--fill); color: var(--mutedText); font-size: 11px; }
+
 .pcw .pmenu { position: absolute; bottom: 10px; right: 10px; }
 .pcw .pmenu .ib { background: var(--surface); box-shadow: 0 1px 4px rgb(15 23 42 / .12); opacity: 0; transition: opacity var(--dur-quick) var(--ease-out); }
 .pcw:hover .pmenu .ib, .pcw .pmenu .ib:focus-visible, .pcw .pmenu .ib[aria-expanded="true"] { opacity: 1; }

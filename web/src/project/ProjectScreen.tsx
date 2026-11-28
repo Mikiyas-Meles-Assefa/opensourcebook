@@ -4,6 +4,7 @@ import type { Cite, Json, PlanView, Project } from "../api/types";
 import { useApi } from "../app/context";
 import { ErrorNotice, LoadState } from "../app/Status";
 import { useLoad } from "../app/useLoad";
+import { useLiveSources } from "./useLiveSources";
 import { DeleteProject } from "../screens/DeleteProject";
 import { Icon } from "../design/Icon";
 import { Logo } from "../design/ui";
@@ -49,6 +50,8 @@ function ProjectView({ id }: { id: string }) {
   const project = useLoad(() => client.getProject(id), [client, id]);
   useTitle(project.data?.title);
   const sources = useLoad(() => client.all((q) => client.projectSources(id, q)), [client, id]);
+  // A project opened from a folder: what is added, changed or removed there shows on its own.
+  useLiveSources(project.data?.archivedAt ? undefined : project.data?.folder, sources.data, () => client.all((q) => client.projectSources(id, q)), sources.set);
   const plans = useProjectPlans(id);
   const [unselected, setUnselected] = useState<Set<string>>(new Set());
   // Words the right column asks the chat to send (a plan, while no plan panel is plugged in).
@@ -209,6 +212,9 @@ function ProjectView({ id }: { id: string }) {
             setUnselected={changeTicks}
             onOpen={(sid) => setParam("source", sid)}
             onRemoved={(r) => r.changedPlanIds.length > 0 && void plans.reload()}
+            onFolderChanged={async () => {
+              await Promise.all([project.reload(), sources.reload()]);
+            }}
           />
         )}
         <ChatPanel

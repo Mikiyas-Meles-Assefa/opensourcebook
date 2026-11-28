@@ -5,6 +5,7 @@ import type {
   Json,
   PhoneStatus,
   VoiceInstallState,
+  WeeklyBackup,
   AgentPick,
   AgentPickPatch,
   AgentStatus,
@@ -43,6 +44,8 @@ import type {
   Progress,
   ProgressItem,
   Project,
+  FolderCheck,
+  Library,
   ProjectCounts,
   PlanDeleted,
   ProjectDeleted,
@@ -63,6 +66,9 @@ import type {
   SetupState,
   DrawingSettings,
   UploadType,
+  RestoreChoice,
+  RestoreDone,
+  RestoreView,
 } from "./types";
 
 type Query = Record<string, string | number | undefined>;
@@ -200,6 +206,43 @@ export class ApiClient {
   async importProject(bundle: unknown, example?: string): Promise<Project> {
     return (await this.request<{ project: Project }>("POST", "/v1/projects/import", { json: { bundle, ...(example ? { example } : {}) } })).project;
   }
+  /** Links a project to a folder on this computer and looks at it at once; only the browser on this computer may. */
+  linkFolder(id: string, path: string): Promise<{ project: Project; check: FolderCheck }> {
+    return this.request("PUT", `/v1/projects/${enc(id)}/folder`, { json: { path } });
+  }
+  /** Unlinks a project's folder; its sources stay. */
+  async unlinkFolder(id: string): Promise<Project> {
+    return (await this.request<{ project: Project }>("DELETE", `/v1/projects/${enc(id)}/folder`)).project;
+  }
+  /** Looks at a linked folder again: new files added, changed ones read again, removed ones marked missing. */
+  checkFolder(id: string): Promise<{ project: Project; check: FolderCheck }> {
+    return this.request("POST", `/v1/projects/${enc(id)}/folder/check`);
+  }
+  /** The folder finished videos are copied into. */
+  async library(): Promise<Library> {
+    return (await this.request<{ library: Library }>("GET", "/v1/library")).library;
+  }
+  /** Picks the library folder; `null` goes back to the usual one. */
+  async setLibrary(folder: string | null): Promise<Library> {
+    return (await this.request<{ library: Library }>("PUT", "/v1/library", { json: { folder } })).library;
+  }
+  // Backups (only the browser on this computer)
+  /** Where the browser downloads a backup of every project. */
+  backupUrl(): string {
+    return `${this.baseUrl}/v1/backup`;
+  }
+  /** Sends a backup file to be restored; answers what is in it, before anything is written. */
+  async startRestore(file: Blob): Promise<RestoreView> {
+    return (await this.request<{ restore: RestoreView }>("POST", "/v1/backup/restores", { body: file, headers: { "content-type": "application/zip" } })).restore;
+  }
+  /** Restores, with a choice for every project that is here already. */
+  finishRestore(id: string, choices: Record<string, RestoreChoice>): Promise<RestoreDone> {
+    return this.request("POST", `/v1/backup/restores/${enc(id)}`, { json: { choices } });
+  }
+  async cancelRestore(id: string): Promise<void> {
+    await this.request("DELETE", `/v1/backup/restores/${enc(id)}`);
+  }
+
   /** Deletes a project for good, with everything in it; `409 project_busy` while a plan in it runs. */
   deleteProject(id: string): Promise<ProjectDeleted> {
     return this.request("DELETE", `/v1/projects/${enc(id)}`);
@@ -495,6 +538,10 @@ export class ApiClient {
   remakeScene(outputId: string, scene: string, input: RemakeInput = {}): Promise<RemakeStarted> {
     return this.request("POST", `/v1/outputs/${enc(outputId)}/scenes/${enc(scene)}/remake`, { json: input });
   }
+  /** Opens the folder a job works in, in this computer's file manager (a video's job folder); refused on a paired phone. */
+  showJobFiles(id: string): Promise<{ shown: true }> {
+    return this.request("POST", `/v1/jobs/${enc(id)}/files/show`);
+  }
   /** Stops a job that is not an item's own (a scene being made again). */
   cancelJob(id: string): Promise<{ job: { id: string; status: string } }> {
     return this.request("POST", `/v1/jobs/${enc(id)}/cancel`);
@@ -527,6 +574,17 @@ export class ApiClient {
   }
   unpairDevice(id: string): Promise<PhoneStatus> {
     return this.request("DELETE", `/phone/devices/${enc(id)}`);
+  }
+
+  // The weekly backup into the library, which the launcher saves (cli/backups.ts), through the proxy. Only this computer reaches it.
+  weeklyBackup(): Promise<WeeklyBackup> {
+    return this.request("GET", "/launcher/backups");
+  }
+  setWeeklyBackup(on: boolean): Promise<WeeklyBackup> {
+    return this.request("POST", `/launcher/backups/${on ? "on" : "off"}`);
+  }
+  keepBackups(keep: number): Promise<WeeklyBackup> {
+    return this.request("POST", `/launcher/backups/keep/${keep}`);
   }
 
   // A voice that runs on this computer, installed by the launcher (cli/voice.ts), through the proxy. Only this computer reaches it.
