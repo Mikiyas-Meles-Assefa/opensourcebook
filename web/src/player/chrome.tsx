@@ -202,7 +202,13 @@ function ChromeLink({ action, className, children, ...aria }: { action: ChromeAc
 
 /** The thin line along the bottom: how far through, broken where parts begin; a control when the player can move to a point. */
 export function ProgressLine({ progress, marks = [], onSeek }: { progress: number; marks?: number[] | undefined; onSeek?: ((fraction: number) => void) | undefined }) {
-  const at = `${Math.round(progress * 1000) / 10}%`;
+  // While the person drags, the bar follows the pointer: the video keeps
+  // reporting its old position until the seek lands, and a value taken from
+  // it would pull the thumb back under the pointer. The seek happens on release.
+  const [scrub, setScrub] = useState<number | null>(null);
+  const scrubbing = useRef(false);
+  const shown = scrub ?? Math.round(progress * 1000);
+  const at = `${shown / 10}%`;
   return (
     <div className="pc-line" style={{ "--at": at } as CSSProperties}>
       <i />
@@ -210,7 +216,7 @@ export function ProgressLine({ progress, marks = [], onSeek }: { progress: numbe
         <span key={m} className="pc-mark" style={{ left: `${m * 100}%` }} />
       ))}
       {onSeek ? (
-        <input type="range" aria-label="Where you are" min={0} max={1000} step={1} value={Math.round(progress * 1000)} aria-valuetext={`${Math.round(progress * 100)}%`} onChange={(e) => onSeek(Number(e.target.value) / 1000)} />
+        <input type="range" aria-label="Where you are" min={0} max={1000} step={1} value={shown} aria-valuetext={`${shown / 10}%`} onChange={(e) => { const value = Number(e.target.value); if (scrubbing.current) setScrub(value); else onSeek(value / 1000); }} onPointerDown={() => { scrubbing.current = true; }} onPointerUp={(e) => { if (!scrubbing.current) return; scrubbing.current = false; setScrub(null); onSeek(Number(e.currentTarget.value) / 1000); }} onPointerCancel={() => { scrubbing.current = false; setScrub(null); }} />
       ) : (
         <span className="sr-only" role="progressbar" aria-label="Where you are" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)} />
       )}

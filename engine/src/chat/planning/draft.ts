@@ -11,7 +11,7 @@ import { autoLengthMark } from "../../studio/timing";
 import { issueMessages, overBudget, validatePlan } from "../../studio/plan-runner";
 import type { FormatRegistry } from "../../studio/registry";
 import type { PlanEdge, PlanNode, Settings } from "../../studio/repositories";
-import type { JsonValue, NodeSource, SourceLocator } from "../../studio/types";
+import type { JsonValue, NodeSource, PicksByScope, SourceLocator } from "../../studio/types";
 import { charsIn } from "./sources";
 
 export interface DraftSource {
@@ -62,8 +62,8 @@ export interface DraftServices {
   projectSources: Set<string>;
   /** Source text for estimates; undefined when it is not ready. */
   loadSource(sourceId: string): Promise<NodeSource | undefined>;
-  /** Remembered agent/model/effort picks by scope (for example a format id), when known. */
-  picks?: Record<string, { agent?: string; model?: string; effort?: string }>;
+  /** Remembered picks by scope (for example a format id), with a reviewer's `off` on its review scope, when known. */
+  picks?: PicksByScope;
 }
 
 const MAX_TITLE = 200;
