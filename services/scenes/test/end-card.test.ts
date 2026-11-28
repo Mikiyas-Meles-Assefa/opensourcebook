@@ -1,7 +1,7 @@
 // The end card: readable on a phone, inside its box, naming where the video came from: its sources and its pictures.
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { CARD, CARD_SECONDS, cardLines, cardSeconds, heightOf, LEAST, widthOf } from "../video/end-card.ts";
+import { CARD, CARD_RISE, CARD_SECONDS, cardLines, cardRise, cardSeconds, heightOf, LEAST, widthOf } from "../video/end-card.ts";
 import { layOut, type Placed } from "../src/timeline.ts";
 
 const fits = (lines: ReturnType<typeof cardLines>) => {
@@ -88,4 +88,18 @@ test("the card stays long enough to read, from 5 to 7 s, and the video's length 
   assert.deepEqual(card.credits!.sources, [{ title: "Notes", quotes: 3 }]);
   assert.equal(laid.timeline.frames, 90 + card.frames);
   assert.ok(card.frames >= CARD_SECONDS.least * 30);
+});
+
+test("the card is never a still for more than about 2 s: it rises evenly from its first frame to its last, starting in place and staying in the frame", () => {
+  const fps = 30;
+  for (const seconds of [CARD_SECONDS.least, CARD_SECONDS.most]) {
+    const frames = seconds * fps;
+    assert.equal(cardRise(0, frames), 0, "the first frame is in place");
+    assert.equal(cardRise(frames - 1, frames), CARD_RISE, "the last frame has risen all the way");
+    for (let f = 1; f < frames; f++) assert.ok(cardRise(f, frames) > cardRise(f - 1, frames), `frame ${f} moves`);
+    // Over any 2 s, with no music under it, the card has visibly moved.
+    for (let f = 0; f + 2 * fps < frames; f++) assert.ok(cardRise(f + 2 * fps, frames) - cardRise(f, frames) >= 5, `still from frame ${f}`);
+  }
+  // It stays clear of the frame's top edge.
+  assert.ok(CARD.top - CARD_RISE >= 60, `${CARD.top - CARD_RISE} px from the top`);
 });

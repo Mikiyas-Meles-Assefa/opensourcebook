@@ -6,7 +6,7 @@ import type { Resolved, Scene, Theme, Value } from "../engine/core/types.ts";
 import { SceneView } from "../engine/render/SceneView.tsx";
 import { Surface } from "../engine/style/draw.tsx";
 import type { Clip } from "../schemas/project.ts";
-import { CARD, cardLines, LEADING, type CardLine } from "./end-card.ts";
+import { CARD, cardLines, cardRise, LEADING, type CardLine } from "./end-card.ts";
 
 // Image sources in a scene are files in the project folder, which is Remotion's public dir.
 const served = (v: Value): Value => (typeof v === "string" && v && !/^(https?:|data:|blob:|\/)/.test(v) ? staticFile(v) : v);
@@ -113,8 +113,10 @@ export const EngineShot: React.FC<{ clip: Clip; sceneFile?: string; imageCredits
 
 // The end card in the scene's style: its surface, title font and colors. Read on a phone in a few seconds with no
 // voice, so it says little, in large words laid out beforehand to fit its box (end-card.ts), and it is on screen from
-// its first frame: a card that faded in was half legible on the frames a viewer first saw.
+// its first frame: a card that faded in was half legible on the frames a viewer first saw. It rises slowly while it is
+// on screen, so the video does not end on seconds of a picture standing still.
 export const EngineCredits: React.FC<{ clip: Clip }> = ({ clip }) => {
+  const frame = useCurrentFrame();
   const theme: Theme = clip.theme!;
   const c = theme.colors;
   // The headings are set as the style sets a title (its case and letter spacing), with the style's caption rule under
@@ -135,7 +137,7 @@ export const EngineCredits: React.FC<{ clip: Clip }> = ({ clip }) => {
   return (
     <AbsoluteFill style={{ backgroundColor: c.paper }}>
       {theme.style && <Surface style={theme.style} color={c.paper!} theme={theme} width={1080} height={1920} />}
-      <AbsoluteFill style={{ top: CARD.top, height: CARD.height, left: CARD.left, width: CARD.width, justifyContent: "center", alignItems: "center", textAlign: "center", overflow: "hidden" }}>
+      <AbsoluteFill style={{ top: CARD.top - cardRise(frame, clip.frames), height: CARD.height, left: CARD.left, width: CARD.width, justifyContent: "center", alignItems: "center", textAlign: "center", overflow: "hidden" }}>
         {lines.map((l, i) => (
           <React.Fragment key={i}>
             <div style={{ ...look(l), fontSize: l.size, lineHeight: LEADING, whiteSpace: "nowrap", marginBottom: l.role === "heading" && l.gap ? 0 : l.gap }}>{l.text}</div>
