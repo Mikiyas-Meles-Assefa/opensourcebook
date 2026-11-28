@@ -29,3 +29,14 @@ test("a fresh page the launcher asks for is a path of the web app, shown once th
   assert.equal(reopenRequest('{"to":"/"}'), undefined, "no time, no request");
   assert.equal(openingTo("http://127.0.0.1:5173/api/open?code=abc&to=%2F", "/projects/p 1?tab=chat"), "http://127.0.0.1:5173/api/open?code=abc&to=%2Fprojects%2Fp+1%3Ftab%3Dchat");
 });
+
+test("the running copy is the app's own unless another copy sharing the folder started it, and the app stops only its own", async () => {
+  const { runningCopy } = await import("../src/launcher.ts");
+  const app = "/Users/ana/Library/Application Support/Open Sourcebook/app";
+  assert.equal(runningCopy(undefined, app), "none");
+  assert.equal(runningCopy("not json", app), "none");
+  assert.equal(runningCopy(JSON.stringify({ url: "" }), app), "none");
+  assert.equal(runningCopy(JSON.stringify({ pid: 4, root: app }), app), "app");
+  assert.equal(runningCopy(JSON.stringify({ pid: 4 }), app), "app", "a record from an older launcher, which says no folder, is the app's");
+  assert.equal(runningCopy(JSON.stringify({ pid: 4, root: "/Users/ana/code/opensourcebook" }), app), "other");
+});

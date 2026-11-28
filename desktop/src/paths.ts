@@ -10,19 +10,14 @@
  * (install/package/lib/archive.mjs), and ffmpeg in `tools/` with links in `bin/` (install/package/lib/tools.mjs). The
  * launcher is told this folder in OPENSOURCEBOOK_APP_DATA and keeps the person's state, projects and jobs there too.
  */
-import { homedir } from "node:os";
-import { join, win32 } from "node:path";
+import { join } from "node:path";
+import { APP_NAME, appDataFolder, IN_APP_DATA } from "../../cli/app-data.ts";
 
-export const APP_NAME = "Open Sourcebook";
-
-/** The app data folder, or the one named in OPENSOURCEBOOK_APP_DATA. */
-export function appDataRoot(platform: NodeJS.Platform = process.platform, env: NodeJS.ProcessEnv = process.env, home = homedir()): string {
-  const set = env.OPENSOURCEBOOK_APP_DATA?.trim();
-  if (set) return set;
-  if (platform === "darwin") return join(home, "Library", "Application Support", APP_NAME);
-  if (platform === "win32") return win32.join(env.APPDATA?.trim() || win32.join(home, "AppData", "Roaming"), APP_NAME);
-  return join(env.XDG_DATA_HOME?.trim() || join(home, ".local", "share"), APP_NAME);
-}
+/**
+ * The app data folder, or the one named in OPENSOURCEBOOK_APP_DATA: the launcher's own rule (cli/app-data.ts), so the
+ * app, the one-line install and a clone started with `npm start` all use the same folder.
+ */
+export { APP_NAME, appDataFolder as appDataRoot };
 
 export interface Layout {
   root: string;
@@ -40,6 +35,8 @@ export interface Layout {
   log: string;
   /** Where the launcher asks for a fresh page of the window (a tab from an earlier run wants one), as the app tells it. */
   reopen: string;
+  /** What the running launcher says about itself, whichever copy started it (the app, or a clone sharing this folder). */
+  running: string;
 }
 
 export function layout(root: string): Layout {
@@ -52,6 +49,7 @@ export function layout(root: string): Layout {
     shell: join(root, "window"),
     log: join(root, "desktop.log"),
     reopen: join(root, "reopen.json"),
+    running: join(root, IN_APP_DATA.state, "running.json"),
   };
 }
 

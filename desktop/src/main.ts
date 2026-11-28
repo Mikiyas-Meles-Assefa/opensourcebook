@@ -1,13 +1,14 @@
 /**
  * The desktop app: Open Sourcebook in its own window. Opening it puts the programs in place (first start, or a waiting
  * update), starts the four of them with the launcher in the app data folder, and shows the web app; quitting it stops
- * them. While it starts the window shows one plain line of what is happening; when something goes wrong it says what,
+ * them. When a clone's `npm start` already runs them on the same folder, the window shows that copy and quitting leaves
+ * it running. While it starts the window shows one plain line of what is happening; when something goes wrong it says what,
  * with "Try again" and "Show log".
  */
 import { appendFileSync, mkdirSync, statSync, truncateSync, readFileSync, watchFile } from "node:fs";
 import { dirname, join } from "node:path";
 import { app, BrowserWindow, dialog, ipcMain, Notification, shell } from "electron";
-import { failure, openingTo, reopenRequest, runLauncher } from "./launcher.ts";
+import { failure, openingTo, reopenRequest, runLauncher, runningCopy } from "./launcher.ts";
 import { appDataRoot, carried as carriedIn, layout, APP_NAME } from "./paths.ts";
 import { prepare } from "./prepare.ts";
 import { resolvePath } from "./shell-path.ts";
@@ -69,8 +70,25 @@ async function launcherEnv(): Promise<NodeJS.ProcessEnv> {
 const launcher = async (args: string[], onLine?: (line: string) => void, logAnswer = true) =>
   runLauncher(args, { node: carried.node, app: at.app, env: await launcherEnv(), ...(onLine ? { onLine } : {}), ...(logAnswer ? { onLog: (text: string) => log(text) } : {}) });
 
+/** What `running.json` in the shared state folder says, or undefined when there is none. */
+function runningRecord(): string | undefined {
+  try {
+    return readFileSync(at.running, "utf8");
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Stops the programs the app started. A copy another program started on the same app data folder (a clone run with
+ * `npm start`) is not the app's: the window only showed it, so it is left running.
+ */
 async function stopPrograms(): Promise<void> {
   if (!readJson(join(at.app, "package.json"))) return;
+  if (runningCopy(runningRecord(), at.app) === "other") {
+    log(`${new Date().toISOString()}  The Open Sourcebook running here was started by another copy, so it is left running.`);
+    return;
+  }
   const answer = await launcher(["stop", "--json"]);
   if (answer.json?.ok === false) log(`Stopping said: ${failure(answer)}`);
 }
@@ -86,8 +104,15 @@ async function begin(): Promise<void> {
     if (ready.changed) log(`Updated to ${ready.changed.version}${ready.changed.notes ? `: ${ready.changed.notes}` : ""}`);
     show({ kind: "progress", line: "Starting the programs" });
     started = true;
-    const answer = await launcher(["start", "--background", "--json", "--timeout", "60"], (line) => show({ kind: "progress", line }));
+    let answer = await launcher(["start", "--background", "--json", "--timeout", "60"], (line) => show({ kind: "progress", line }));
+    // Another copy on this folder is still starting: asked again until it answers, for up to two minutes.
+    for (let i = 0; i < 60 && answer.json?.ok === true && answer.json.already === true && !answer.json.url; i++) {
+      await new Promise((r) => setTimeout(r, 2000));
+      answer = await launcher(["start", "--background", "--json", "--timeout", "60"]);
+    }
     if (answer.json?.ok !== true) throw new Error(failure(answer));
+    // Already running from another copy that shares this folder (a clone's `npm start`): the window shows that one.
+    if (answer.json.already === true && runningCopy(runningRecord(), at.app) === "other") log(`${new Date().toISOString()}  Showing the Open Sourcebook already running from ${String(answer.json.root ?? "another copy")}; quitting the app leaves it running.`);
     const open = await launcher(["open", "--print", "--json"], undefined, false);
     const entry = open.json?.open;
     if (open.json?.ok !== true || typeof entry !== "string") throw new Error(failure(open));
@@ -195,7 +220,8 @@ else {
   app.on("activate", () => {
     if (!window) createWindow();
   });
-  // The programs belong to the window: closing it quits, and quitting stops them first.
+  // The programs the app started belong to the window: closing it quits, and quitting stops them first (stopPrograms
+  // leaves a copy another program started running).
   app.on("window-all-closed", () => app.quit());
   app.on("before-quit", (event) => {
     if (!started || stopped) return;

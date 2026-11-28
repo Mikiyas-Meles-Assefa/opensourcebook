@@ -5,6 +5,7 @@
  * `stop --json` stops everything it started.
  */
 import { spawn } from "node:child_process";
+import { realpathSync } from "node:fs";
 import { join } from "node:path";
 
 export interface Answer {
@@ -110,4 +111,31 @@ export function openingTo(entry: string, to: string): string {
   const url = new URL(entry);
   url.searchParams.set("to", to);
   return url.toString();
+}
+
+const real = (path: string) => {
+  try {
+    return realpathSync(path);
+  } catch {
+    return path;
+  }
+};
+
+/**
+ * Which copy the running launcher is, from what it says about itself (`running.json` in the shared state folder):
+ * "app" when it runs from the app's own `app/` (or says nothing of where it runs from, as a file from an older launcher
+ * does), "other" when another copy on this computer started it (a clone with `npm start`, sharing the app data folder),
+ * and "none" when nothing is recorded. The app stops only its own; another copy's is left running when the app quits.
+ */
+export function runningCopy(text: string | undefined, app: string): "app" | "other" | "none" {
+  if (text === undefined) return "none";
+  let root: unknown;
+  try {
+    const record = JSON.parse(text) as { pid?: unknown; root?: unknown };
+    if (typeof record.pid !== "number") return "none";
+    root = record.root;
+  } catch {
+    return "none";
+  }
+  return typeof root === "string" && real(root) !== real(app) ? "other" : "app";
 }

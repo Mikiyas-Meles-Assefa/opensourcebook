@@ -26,7 +26,7 @@ This updates the programs, not the app around them. The app itself has no self-u
 
 | Folder | What is in it |
 | --- | --- |
-| `~/Library/Application Support/Open Sourcebook/` (Windows `%APPDATA%\Open Sourcebook`, Linux `~/.local/share/Open Sourcebook`) | Everything. `OPENSOURCEBOOK_APP_DATA` names another folder, and the launcher is told this folder in the same setting |
+| `~/Library/Application Support/Open Sourcebook/` (Windows `%APPDATA%\Open Sourcebook`, Linux `~/.local/share/Open Sourcebook`) | Everything. `OPENSOURCEBOOK_APP_DATA` names another folder, and the launcher is told this folder in the same setting. A clone started with `npm start` uses the same folder (the rule is `cli/app-data.ts`), so while it runs the app shows that copy and quitting leaves it running |
 | `app/` | The programs (the repo's files), and the launcher runs from here. `app.manifest` lists the files the last version brought |
 | `installed.json` | Which version is in `app/`, and whether it came with the app or from a release |
 | `updates/` | A downloaded version waiting for the next start |

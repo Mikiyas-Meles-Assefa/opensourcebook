@@ -6,9 +6,9 @@
   "license": "MIT",
   "type": "module",
   "description": "Open Sourcebook in its own window: starts the four programs when it opens, stops them when it quits, and keeps them up to date.",
-  "main": "dist/main.js",
+  "main": "dist/desktop/src/main.js",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json",
     "resources": "node scripts/resources.ts",
     "start": "npm run build && electron .",
     "package": "node scripts/package.ts",
