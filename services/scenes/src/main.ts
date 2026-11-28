@@ -2,6 +2,7 @@
  * Starts the scenes service on this computer (README). Settings come from the environment, and from `.env` beside this
  * service when there is one (git-ignored; the shell's own settings win).
  */
+import { KEEP, type Keep } from "./folder.ts";
 import { existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { AudioJobs } from "./audio.ts";
@@ -39,6 +40,8 @@ if (connectorToken.length < 16) {
 }
 const port = Number(env.SCENES_PORT ?? 8670);
 const dataDir = env.SCENES_DATA_DIR?.trim() || join(import.meta.dirname, "..", ".data");
+// The job folders, one per video and nothing else (docs/JOB-FOLDER.md); in the data folder itself unless set apart.
+const jobsDir = env.SCENES_JOBS_DIR?.trim() || dataDir;
 // No clock by default: the agent works until it finishes or the person stops it. SCENES_TURN_MINUTES sets one.
 const minutes = Number(env.SCENES_TURN_MINUTES ?? 0);
 // A hung agent is told from a slow one by its calls: none to Open Sourcebook's tools for this long stops its turn, the work kept
@@ -74,6 +77,7 @@ const keepRaw = env.SCENES_KEEP_AGENT_PROMPT?.trim();
 const keepAgentPrompt = keepRaw ? (/^(1|true|yes)$/i.test(keepRaw) ? true : /^(0|false|no)$/i.test(keepRaw) ? false : undefined) : undefined;
 const jobs = new Jobs({
   dataDir,
+  jobsDir,
   connector,
   voice,
   styles: listStyles,
@@ -87,6 +91,10 @@ const jobs = new Jobs({
   knowledge: knowledgeFromEnv(env),
   ...(keepAgentPrompt !== undefined ? { keepAgentPrompt } : {}),
   review,
+  // A job folder's pictures come from the engine (docs/JOB-FOLDER.md); a finished video is copied to the library when one is set.
+  ...(env.SCENES_ENGINE_URL?.trim() ? { engineUrl: env.SCENES_ENGINE_URL.trim() } : {}),
+  ...(env.SCENES_LIBRARY_DIR?.trim() ? { libraryDir: env.SCENES_LIBRARY_DIR.trim() } : {}),
+  keep: keepFromEnv(env),
 });
 // Audio: spoken walk-throughs in the same voice, kept under the data folder's audio/.
 const audio = new AudioJobs({ dataDir, voice, log: (line) => console.log(line) });
@@ -98,6 +106,12 @@ const server = createScenesServer({ token, jobs, audio, connector, voice, setup,
 server.listen(port, "127.0.0.1", () => {
   base = `http://127.0.0.1:${port}`;
   void measureStyles(speed, listStyles().map((s) => s.id), { folder: join(dataDir, ".speed"), concurrency: framesAtOnce(thisMachine()).frames, log: (line) => console.log(line) }).then(() => rmSync(join(dataDir, ".speed"), { recursive: true, force: true }));
-  console.log(`Open Sourcebook scenes service on ${base}: agent through ${connector.config.url} (${connector.config.model ?? "its own default model for a video"}), voice ${setup.current().id}, ${listStyles().length} styles offered of ${allStyles().length}, data in ${dataDir}${chrome ? `, Chrome ${chrome}` : ""}, toolbox: ${boxTools(toolbox).map((t) => t.name).join(", ")}, fresh viewer ${review.on ? `on${review.model || review.effort ? ` (${[review.model, review.effort].filter(Boolean).join(", ")})` : ""}` : "off"}. This computer only.`);
+  console.log(`Open Sourcebook scenes service on ${base}: agent through ${connector.config.url} (${connector.config.model ?? "its own default model for a video"}), voice ${setup.current().id}, ${listStyles().length} styles offered of ${allStyles().length}, data in ${dataDir}${jobsDir !== dataDir ? `, jobs in ${jobsDir}` : ""}${chrome ? `, Chrome ${chrome}` : ""}, toolbox: ${boxTools(toolbox).map((t) => t.name).join(", ")}, fresh viewer ${review.on ? `on${review.model || review.effort ? ` (${[review.model, review.effort].filter(Boolean).join(", ")})` : ""}` : "off"}. This computer only.`);
 });
 for (const signal of ["SIGINT", "SIGTERM"] as const) process.on(signal, () => server.close(() => process.exit(0)));
+
+/** How many jobs, and how many days of them, are kept after they end: SCENES_KEEP_JOBS and SCENES_KEEP_DAYS, else `KEEP`. */
+function keepFromEnv(e: Record<string, string | undefined>): Keep {
+  const n = (raw: string | undefined, fallback: number) => (raw?.trim() && Number.isFinite(Number(raw)) && Number(raw) >= 0 ? Number(raw) : fallback);
+  return { jobs: n(e.SCENES_KEEP_JOBS, KEEP.jobs), days: n(e.SCENES_KEEP_DAYS, KEEP.days) };
+}
