@@ -206,7 +206,7 @@ test("every registered agent says where it is installed from, and status passes 
     if (agent.install.command !== undefined) assert.ok(agent.install.command.trim() && !agent.install.command.includes("\n"), agent.id);
     assert.ok(agent.signIn, agent.id);
   }
-  const agent = { ...fakeAgent(async () => ({ ok: true })), signIn: "fake login", install: { command: "get fake", url: "https://example.com/fake" } };
+  const agent = { ...fakeAgent(async () => ({ ok: true })), signIn: "fake login", install: { command: "get fake", windowsCommand: "get fake", url: "https://example.com/fake" } };
   const t = await setup(agent);
   try {
     const status = await (await fetch(`${t.url}/status`, { headers: { authorization: `Bearer ${TOKEN}` } })).json();
