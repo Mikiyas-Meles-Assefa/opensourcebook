@@ -21,8 +21,9 @@ You need Node 24, ffmpeg and a clone (the one-line install in the README is for 
 ```bash
 git clone https://github.com/Mikiyas-Meles-Assefa/opensourcebook.git
 cd opensourcebook
-npm start            # installs, sets up and starts the four programs
+npm start            # installs, sets up and starts the four programs, on the app data folder the desktop app uses too
 npm start -- --dev   # the engine and the web app reload as you save
+npm start -- --data /tmp/osb --ports-from 9100   # a private copy with its own projects, beside the one you use
 npm run check        # what this computer is missing
 ```
 
@@ -52,7 +53,7 @@ Add a test for what you add. Try it for real too, and say what you tried.
 ## The few rules
 
 - **Commit messages.** One plain sentence with a word for the area first: `Engine: ...`, `Web: ...`, `Scenes: ...`, `Connector: ...`, `Launcher: ...`, `Docs: ...`, `Skills: ...`, `Decisions: ...`. Say what is true now, not what you did. For example: `Scenes: a heatmap piece, a grid of values shaded by size that fills row by row`.
-- **Nothing private or built.** No secrets (`.env`, `.dev.vars`, tokens, cookies, `.opensourcebook/`), no build output and no generated videos.
+- **Nothing private or built.** No secrets (`.env`, `.dev.vars`, tokens, cookies, the app data folder, an older clone's `.opensourcebook/`), no build output and no generated videos.
 - **Its own words.** No other product is named as the source of an idea ([`AGENTS.md`](AGENTS.md) has the rule in full).
 - **What is new.** When a person using Open Sourcebook would notice the change, add one line at the top of [`CHANGES.md`](CHANGES.md) under today's date (a heading such as `## 2026-11-19`; add it if it is not there): `- ` and a plain sentence on what they can now do. An update prints these lines to people, so never edit or reorder older ones. A tagged version has its notes in [`docs/RELEASES.md`](docs/RELEASES.md); a change worth a line there goes under Unreleased.
 - **Decisions.** A change that settles something lasting (a rule for how Open Sourcebook works, what a new kind of thing means, what it may do on someone's computer, a change of direction) adds a row at the end of [`docs/DECISIONS.md`](docs/DECISIONS.md), with the next free number, saying what changed and why. A new style, piece, agent or example does not need one.

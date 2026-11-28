@@ -159,6 +159,8 @@ jobs:
             web/package-lock.json
             services/agent-connector/package-lock.json
             services/scenes/package-lock.json
+      - name: A scratch app data folder for this run, never the runner's own
+        run: echo "OPENSOURCEBOOK_APP_DATA=$RUNNER_TEMP/app-data" >> "$GITHUB_ENV"
       - name: ffmpeg
         run: command -v ffmpeg || choco install ffmpeg -y --no-progress
       - run: npm run check
@@ -180,10 +182,10 @@ jobs:
       - name: opensourcebook stop stops everything
         run: |
           node cli/opensourcebook.mjs stop
-          for i in $(seq 1 30); do test -e .opensourcebook/running.json || break; sleep 1; done
+          for i in $(seq 1 30); do test -e "$OPENSOURCEBOOK_APP_DATA/state/running.json" || break; sleep 1; done
           sleep 3
           tail -5 start.log
           if tasklist | grep -iE "workerd|chrome-headless-shell"; then echo "something of Open Sourcebook is still running"; exit 1; fi
       - name: Logs
         if: failure()
-        run: tail -n 60 .opensourcebook/logs/*.log || true
+        run: tail -n 60 "$OPENSOURCEBOOK_APP_DATA"/state/logs/*.log || true

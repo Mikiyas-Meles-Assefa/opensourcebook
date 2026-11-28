@@ -1099,6 +1099,62 @@ phone. A range it cannot satisfy is `416` with `content-range: bytes */<size>`.
 Only the asked bytes are read from storage, streamed as they are sent; an
 open range (`bytes=N-`) is the rest of the file.
 
+
+## Backing up every project (Nov 26, 2026; #66; local only)
+
+Every project in one zip file, and back (`src/backup/`). Only when the engine
+runs on the person's own computer (a deployed engine answers
+`501 this_computer_only`); the web app's proxy lets only the browser on that
+computer reach these routes, never a paired phone.
+
+| Route | Request | Response | Errors |
+|---|---|---|---|
+| `GET /v1/backup` | | `200` the zip, `content-disposition: attachment; filename="Open Sourcebook backup <YYYY-MM-DD>.zip"` | `501` |
+| `POST /v1/backup/restores` | the zip as the body | `201 { restore: { id, madeAt, projects } }` | `400 invalid_backup`, `400 backup_too_new`, `501` |
+| `POST /v1/backup/restores/:id` | `{ choices?: { <project id>: "keep-both" \| "replace" \| "skip" } }` | `200 { restored: [{ from, projectId, title, as }], skipped: [{ from, title }] }` | `400 invalid_request`, `404 restore_not_found`, `409 choice_needed`, `409 project_busy` |
+| `DELETE /v1/backup/restores/:id` | | `200 { id, cancelled: true }` | `404 restore_not_found` |
+
+- **What is in it.** `manifest.json` (`{ opensourcebook: "backup", version: 1,
+  madeAt, projects, files }`), one `projects/<id>.json` a project
+  with every row of it as stored (the project, its sources and what was read
+  from them, its chats with their messages and the agent's turns, its plans
+  with their items, stages, days and results, and everything made), and
+  `files/assets/<id>` and `files/uploads/<id>`, the files those rows point
+  at (a video's, an audio's, pictures, uploaded files), byte for byte. Every
+  project is in it, archived ones too. Entries are
+  stored as they are, not compressed, so any zip program opens it.
+- **A linked folder's files are not in it.** They are read where they are;
+  the backup keeps the folder's path and each file's path, and restoring
+  points at the same paths (a file not there shows as missing when the
+  folder is checked).
+- **Restoring** is two steps. The file is sent and kept while the person
+  chooses; `restore.projects` lists each project with its counts and, when a
+  project with its id is here already, `here: { title }`. Then the choices
+  are sent: a project not here is added (with its ids, under this
+  computer's owner) unless it is `skip`ped; a project here needs
+  `keep-both` (a copy with new ids, titled `<title> (from backup)`, next to
+  the one here), `replace` (the one here is deleted, as `DELETE
+  /v1/projects/:id` does, and the backup's is put in its place) or `skip`.
+  Without a choice for one that is here nothing is written and the answer is
+  `409 choice_needed` with those `projects`. A project being made or
+  answered in is not replaced (`409 project_busy`). Nothing else is deleted.
+  A kept file already here is left as it is (it is the same file). A plan or
+  item that was running when the backup was made comes back stopped. Once
+  finished or cancelled the file kept meanwhile goes; one left half done is
+  cleaned up a day later.
+
+## A job's files on this computer
+
+`POST /v1/jobs/:id/files/show` opens the folder a job works in, in this
+computer's file manager (Finder, Explorer, or the desktop's own), for a
+format whose jobs have one (`FormatDefinition.jobFiles`; today a video made
+by the scenes service, whose job folder is laid out in
+`docs/JOB-FOLDER.md`). An item's job in `GET /v1/plans/:id/progress` says
+`files: true` when it has such a folder. `200 { shown: true }`; `409
+no_files` with `message` in plain words when it has none, or its folder was
+cleaned up, or the scenes service is not running. The web app offers it
+only in the browser on this computer; a paired phone is refused by its
+proxy.
 ## Usage
 
 | Route | Response | Errors |
@@ -1997,7 +2053,7 @@ the one `POST /v1/uploads` checks:
 
 | Method | Path | Response |
 |---|---|---|
-| `GET` | `/v1/uploads/types` | `200 { maxBytes: number; types: UploadType[] }` |
+| `GET` | `/v1/uploads/types` | `200 { maxBytes: number; types: UploadType[]; folderExtensions: string[] }` |
 
 ```ts
 interface UploadType {
@@ -2013,6 +2069,63 @@ know a `.md`), takes the type its `x-upload-filename` ending says. A file
 the list does not take is `415 unsupported_media_type`, and a file over
 `maxBytes` is `413 upload_too_large`; both messages start with the file's
 name, so a client adding a folder can show one plain line per file.
+
+**A folder linked to a project (Nov 26, 2026; local only).** A copy of a
+folder, as above, does not see later changes. A project can instead be
+linked to a folder on the person's own computer: its files are the
+project's sources, read where they are and never copied into the store
+(`src/sources/folder.ts`). Only an engine started by the launcher on that
+computer can (`LOCAL_FILES_URL`, `cli/local-files.ts`); any other answers
+`501 this_computer_only`, and the web app's proxy refuses linking to a
+paired phone.
+
+| Method | Path | Body | Response |
+|---|---|---|---|
+| `PUT` | `/v1/projects/:id/folder` | `{ path }` | `200 { project, check }`: linked, and looked at at once |
+| `DELETE` | `/v1/projects/:id/folder` | | `200 { project }`: unlinked; its sources stay as they are |
+| `POST` | `/v1/projects/:id/folder/check` | | `200 { project, check }`; `409 no_folder` when it is not linked, `409 project_archived` |
+
+```ts
+interface FolderCheck {
+  folder: string;     // as the computer names it, links followed
+  added: string[];    // paths from the folder
+  changed: string[];  // read again: what the file holds changed
+  missing: string[];  // not there any more; their sources stay, marked missing
+  unchanged: number;
+  failed: Array<{ path: string; message: string }>;
+  skipped: number;    // sound, video, empty, too large, or a kind not taken
+  more: boolean;      // more than 1000 files: none is called missing
+}
+```
+
+The project gains `folder` and `folderCheckedAt`. A source from the folder
+has `origin: "folder"` and `filePath`, and, when it applies, `missingAt`
+and `changedAt`. A check reads only files whose size or change time
+differ; a changed file is read again and its source points at the new
+reading, while the old one stays so a cite made from it still opens. A
+made thing's `GET /v1/outputs/:id` then lists the passages it cites that
+are no longer in their source's text as `changedChunks`, and marks each such
+cite `changed: true`. A file the person removed from the project is not
+added back. The folder's files are taken by the list above, without sound
+and video (`inFolder: false`): a finished video is copied into the linked
+folder itself. A folder that is not there (moved, or its disk not
+connected) is `404 no_folder`. `folderExtensions` in `GET
+/v1/uploads/types` is the endings taken from a folder. While Open
+Sourcebook runs, the launcher watches every linked folder of a project not
+archived and, a moment after its files change, asks for a check, so what
+was added, changed or removed shows on its own; the engine tells the
+launcher (`POST /folder/links` on it) whenever a project is linked,
+unlinked, archived, brought back, deleted or restored. The web app also
+checks when the project is opened and when the person asks. A hidden
+folder, the whole disk and the Mac's `~/Library` are refused.
+
+**The library (Nov 26, 2026; local only).** `GET /v1/library` → `200 {
+library: { folder, chosen } }`; `PUT /v1/library { folder: string | null }`
+picks it (`null` goes back to the usual `Documents/Open Sourcebook`). A
+finished video is copied into the project's linked folder, else into
+`<library>/<project folder>`, the folder named from the project's title the
+first time (`libraryName`) and never renamed (docs/JOB-FOLDER.md, "The
+library"). Nothing in the library is moved, renamed or deleted.
 
 **Google Drive, by a shared link.** Open Sourcebook does not sign in to Google Drive. A
 Drive, Docs, Slides or Sheets link is added like any link (`POST
@@ -2045,7 +2158,7 @@ scenes service on this computer (`services/scenes/src/voices.ts`, the one list
 of voice services); the engine passes each call on through `ScenesClient`
 and reads each answer field by field, so nothing the service did not mean to
 say reaches the browser. The choice and the key are kept by the scenes
-service in a private file on this computer (`SCENES_VOICE_FILE`, `.opensourcebook/voice.json`
+service in a private file on this computer (`SCENES_VOICE_FILE`, `state/voice.json` in the app data folder
 under the launcher), written for its owner alone and laid over
 `services/scenes/.env`, which keeps working. **A key goes in and never comes
 back**: answers say only `keySet` and `keyHint`, its last four characters

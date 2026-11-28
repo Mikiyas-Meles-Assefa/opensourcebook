@@ -69,6 +69,8 @@ export interface NodeSource {
   envelope: SourceEnvelope;
   chunks: SourceChunk[];
   range?: SourceLocator;
+  /** The file on this computer it is read from, for a file of a linked folder (#71). */
+  path?: string;
 }
 
 /** Grounding for one claim. `anchor` says where in the payload it applies (engine-defined path). */
@@ -164,6 +166,12 @@ export interface EngineServices {
    * it here (a direct `runEngine` in a test): the pick is sent as it is.
    */
   settlePick?(scope: string, pick: { agent?: string; model?: string; effort?: string }): Promise<{ agent?: string; model?: string; effort?: string }>;
+  /**
+   * The folder on this computer a finished file of this job is copied into (docs/JOB-FOLDER.md, "The library"): the
+   * project's linked folder, else the project's own folder in the library. Undefined when there is none here (no
+   * project, or an engine not on the person's computer). Nothing is made on disk by asking.
+   */
+  libraryFolder?(): Promise<string | undefined>;
 }
 
 /**
@@ -582,6 +590,19 @@ export interface FormatDefinition<Settings = unknown, Blueprint = unknown, Paylo
    * Absent: the format remakes no part of what it made, and the route refuses it.
    */
   remakeScene?: SceneRemake<Payload>;
+  /**
+   * The folder on this computer a job of this format works in, opened in the file manager for the person
+   * (`POST /v1/jobs/:id/files/show`). Absent: its jobs have no such folder, and the app offers none.
+   */
+  jobFiles?: JobFiles;
+}
+
+/** How a format opens the folder one of its jobs works in (`FormatDefinition.jobFiles`). */
+export interface JobFiles {
+  /** Whether a job with these settings (the job's own, unparsed) works in a folder on this computer that can be opened. */
+  can(settings: unknown): boolean;
+  /** Opens it: undefined once it is open, else why not in a sentence with what to do. */
+  show(input: { jobId: string; settings: unknown; kept: Record<string, JsonValue>; signal?: AbortSignal }): Promise<string | undefined>;
 }
 
 /** How a format makes one scene of a made output again (`FormatDefinition.remakeScene`). */

@@ -23,6 +23,7 @@ import { STALE_TURN_MS } from "../chat/service";
 import { deleteProject as deleteProjectAndContents, projectContents } from "../studio/removal";
 import { BundleError, exportProject, importProject } from "../studio/bundle";
 import type { EngineDeps } from "../wiring";
+import { linksChanged } from "./folders";
 import { listedSourceView } from "./sources";
 import { FieldError, clearableId, clearableInteger, clearableText, object, readFields, required, text } from "./fields";
 
@@ -90,6 +91,8 @@ export async function archiveProject(request: Request, id: string, archive: bool
   const owned = await ownedProject(request, id, deps);
   if ("response" in owned) return owned.response;
   const project = archive ? await deps.repos.projects.archive(id) : await deps.repos.projects.unarchive(id);
+  // An archived project's folder is not watched; brought back, it is again.
+  if (project?.folder) await linksChanged(deps);
   return json({ project: projectView(project!) });
 }
 
@@ -110,6 +113,7 @@ export async function deleteProject(request: Request, id: string, deps: EngineDe
     return errorResponse("project_busy", "A reply is being written in this project; wait for it", 409);
   }
   const deleted = await deleteProjectAndContents(deps, owned.project);
+  if (owned.project.folder) await linksChanged(deps);
   return json({ projectId: id, deleted });
 }
 

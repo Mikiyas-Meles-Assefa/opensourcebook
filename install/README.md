@@ -39,7 +39,7 @@ Everything goes into one folder on the person's computer, `~/.opensourcebook`. S
 | `node/` | A private Node 24, only when the person had none. `node/bin/node` on a Mac and Linux, `node\node.exe` on Windows. |
 | `tools/` | The npm folder used to fetch ffmpeg and ffprobe. |
 
-Outside that folder the install writes only two things: what makes `opensourcebook` a command (a PATH line or a link), and the shortcut (`~/Applications/Open Sourcebook.app` on a Mac, `~/.local/share/applications/opensourcebook.desktop` on Linux, a Start menu shortcut on Windows). A person's own Node, projects and other folders are never touched. It never asks for a password or administrator rights.
+Outside that folder the install writes only two things: what makes `opensourcebook` a command (a PATH line or a link), and the shortcut (`~/Applications/Open Sourcebook.app` on a Mac, `~/.local/share/applications/opensourcebook.desktop` on Linux, a Start menu shortcut on Windows). A person's own Node, projects and other folders are never touched. When Open Sourcebook starts, the launcher keeps the projects and settings in the app data folder, the same one the desktop app and a clone use (`docs/DEVELOPING.md`). It never asks for a password or administrator rights.
 
 The order of things:
 
@@ -183,4 +183,4 @@ Not tried yet:
 - **The shortcut.** `Open Sourcebook.app` is made and well formed, and has not been opened from Finder. The Linux menu entry has not been seen in a menu.
 - An Intel Mac, a home folder with a space in its name, and a real Node older than 24 meeting `npx opensourcebook`.
 
-Removing it: deleting the folder removes Open Sourcebook and the projects in it. The shortcut, the one PATH line in the shell's profile and the browser for videos in the computer's cache folder stay until they are deleted by hand.
+Removing it: deleting the folder removes Open Sourcebook. Your projects and settings are not in it: every copy of Open Sourcebook on the computer keeps them in the app data folder (`~/Library/Application Support/Open Sourcebook` on a Mac, `%APPDATA%\Open Sourcebook` on Windows, `~/.local/share/Open Sourcebook` on Linux), so they stay until that folder is deleted too. The shortcut, the one PATH line in the shell's profile and the browser for videos in the computer's cache folder stay until they are deleted by hand.

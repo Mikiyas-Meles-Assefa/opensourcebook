@@ -5,6 +5,7 @@ The newest first. `opensourcebook update` prints the lines here that your copy d
 ## 2026-11-28
 
 - A Copy button now shows it worked: it turns green with a check and says Copied for a moment.
+- A clone started with `npm start` now keeps your projects and settings in the same app data folder as the desktop app (`~/Library/Application Support/Open Sourcebook` on a Mac), so you see the same projects in both. The first start moves a clone's own folders there once when that folder has no projects yet; when it has some, nothing is moved and one line says which old folders you can delete. With both open they share one running copy, and quitting the desktop app leaves a clone's copy running. `--data <folder>` starts a private copy with its own projects.
 - Setting a video's reviewer to off now stops its fresh viewer turn, and a reviewer you picked watches the finished video on that agent, model and effort.
 
 ## 2026-11-27
@@ -14,6 +15,10 @@ The newest first. `opensourcebook update` prints the lines here that your copy d
 
 ## 2026-11-26
 
+- Settings > Backups saves every project in one file, with its sources, chats, plans and everything made, videos included, and restores it here or on another computer. A project you have already is never changed unless you choose: keep both, or replace yours. Files of a linked folder stay where they are; the backup keeps where they were.
+- Settings > Backups can back up every project once a week into the Backups folder of your library, keeping the newest few (four unless you pick another number), and says when the last one was made. It is off until you turn it on, because each backup holds every video you made and goes into your own folder. `opensourcebook backup` makes one now.
+- In the desktop app, a page that asks for a fresh one after Open Sourcebook was started again shows it in the app's own window, not in your browser.
+- Home has two ways to start a project. Open a folder turns a folder on your computer into a project named after it, its files the project's sources: while Open Sourcebook runs, a file you add, change or remove there shows in the project on its own within a few seconds, and its card shows the folder and Synced. New project picks files and links from anywhere, as before, and is not kept in step with them.
 - You can now drag a video's progress line to rewind or skip ahead; it follows your pointer while you drag and moves the video when you let go.
 - Open Sourcebook no longer slows your computer down while it reads a web page, and videos play without pausing every few seconds. The engine had kept trying to download a whole browser (about 150 MB) in the background, and every video seek read the whole video file again; now pages are read without that browser and a video sends only the part being played. Run `opensourcebook update` to get it.
 

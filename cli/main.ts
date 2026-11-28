@@ -5,15 +5,17 @@
  *   opensourcebook <thing> <action>    every other command, from the table in commands/ (`opensourcebook help` lists them; the paired
  *                                      devices are `opensourcebook device`, from commands/devices.ts)
  *
- * Everything the launcher keeps lives in the state folder, `.opensourcebook/` at the repo root (git-ignored): the
- * secrets, the engine's settings file, what it set up, and a log per program. Where that folder is, and how one from
- * before the rename is found, is state.ts.
+ * Everything the launcher keeps lives in the state folder, `state/` in the app data folder (app-data.ts), the same one
+ * the desktop app uses: the secrets, the engine's settings file, what it set up, and a log per program. A copy's own
+ * folders from before that (`.opensourcebook/` at the repo root and the rest) are moved there once (old-data.ts).
  */
 import { chmodSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { newRunKeys } from "./opener.ts";
 import { join } from "node:path";
 import { gather, lines, render } from "./check.ts";
 import { CHROME_SIZE, downloadChrome, dropSecondCopy, findChrome } from "./chrome.ts";
+import { appDataOf, chooseAppData, engineState, usualAppData, useAppData } from "./app-data.ts";
+import { settleOldData } from "./old-data.ts";
 import { databaseId, earlierDatabases, earlierLine, migrate, migrationFiles, needsMigrations, pastDatabaseIds, type Applied } from "./database.ts";
 import { build, buildFailed, isStale, planBuild, type Plan } from "./build.ts";
 import { install, installParts, linkedLine, linkedPackages, missingPackages, took, type Part } from "./install.ts";
@@ -46,10 +48,14 @@ export interface Options {
   rest: string[];
 }
 
-/** The door a phone comes in by, and the launcher's control of it on 127.0.0.1 (phone.ts). Not programs: the launcher runs them. */
-const PHONE_PORTS = [
+/**
+ * The door a phone comes in by and the launcher's control of it on 127.0.0.1 (phone.ts), and its answers to the engine
+ * about this computer's files (local-files.ts). Not programs: the launcher runs them.
+ */
+const LAUNCHER_PORTS = [
   { name: "phone", port: 5180 },
   { name: "phone-control", port: 5181 },
+  { name: "files", port: 5182 },
 ];
 
 export function parseArgs(argv: string[], env: NodeJS.ProcessEnv = process.env): Options {
@@ -198,6 +204,13 @@ export async function start(options: Options): Promise<number> {
     say(`An Open Sourcebook that is gone left its programs running (${left.map((c) => `${c.id} ${c.pid}`).join(", ")}). Run "opensourcebook stop" to stop those, then start again.`);
     return 1;
   }
+  // Nothing is running on the app data folder: this copy's own folders from before it was shared are moved in, once.
+  const usual = usualAppData();
+  const refused = usual ? settleOldData(ROOT, usual, { say }) : undefined;
+  if (refused) {
+    say(refused);
+    return 1;
+  }
   // Nothing of this copy is running, so a folder from before the rename takes its new name now, in one step.
   HOME = stateFolder(ROOT, process.env, { settle: true, say });
   // Claimed at once, so a second start in this folder sees it while this one checks and installs.
@@ -221,7 +234,7 @@ async function startClaimed(options: Options): Promise<number> {
   await ensureChrome();
   if (!(await ensureDatabase())) return 1;
 
-  const wishes = [...PROGRAMS.flatMap((p) => [{ name: p.id, port: p.port }, ...(p.extraPorts ?? [])]), ...PHONE_PORTS].map((w, i) => (options.portsFrom ? { name: w.name, port: options.portsFrom + i } : w));
+  const wishes = [...PROGRAMS.flatMap((p) => [{ name: p.id, port: p.port }, ...(p.extraPorts ?? [])]), ...LAUNCHER_PORTS].map((w, i) => (options.portsFrom ? { name: w.name, port: options.portsFrom + i } : w));
   const ports = await pickPorts(wishes, undefined, claimPort);
   const moved = PROGRAMS.filter((p) => !options.portsFrom && ports[p.id] !== p.port);
   for (const p of moved) quiet(`  ${p.label}: port ${p.port} is already in use by something else, so Open Sourcebook uses ${ports[p.id]} instead.`);
@@ -240,7 +253,7 @@ async function startClaimed(options: Options): Promise<number> {
  * service's jobs) are made readable by that person only, like `.opensourcebook/`, wherever the copy of Open Sourcebook sits.
  */
 export function keepPrivate(root: string, env: NodeJS.ProcessEnv = process.env): void {
-  for (const dir of [join(root, "engine", ".wrangler"), env.SCENES_DATA_DIR?.trim() || join(root, "services", "scenes", ".data")]) {
+  for (const dir of [appDataOf(env) ? engineState(join(root, "engine"), env) : join(root, "engine", ".wrangler"), env.SCENES_DATA_DIR?.trim() || join(root, "services", "scenes", ".data"), ...(env.SCENES_JOBS_DIR?.trim() ? [env.SCENES_JOBS_DIR.trim()] : [])]) {
     try {
       mkdirSync(dir, { recursive: true, mode: 0o700 });
       chmodSync(dir, 0o700);
@@ -257,6 +270,10 @@ export function keepPrivate(root: string, env: NodeJS.ProcessEnv = process.env):
 export async function main(argv: string[]): Promise<number> {
   // Settings a person still has under their names from before the rename are read as the new ones from here on.
   carryOldNames(process.env);
+  // One folder for everything of the person's, the same for every copy on this computer: state, the engine's data and
+  // the video jobs (app-data.ts). The desktop app names it; --data names another; else it is the system's usual place.
+  const chosen = chooseAppData(argv, process.env);
+  useAppData(process.env);
   const { runCommand } = await import("./commands/index.ts");
-  return runCommand(argv);
+  return runCommand(chosen.argv);
 }

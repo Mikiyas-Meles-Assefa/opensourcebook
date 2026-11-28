@@ -1,3 +1,5 @@
+import { afterEach, beforeEach, describe, test, vi } from "vitest";
+import { forgetThisComputer } from "../app/thisComputer";
 import { ICONS } from "../design/icons";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -346,4 +348,61 @@ test("deleting a live project can be turned into archiving from the question", a
   await vi.waitFor(() => expect(calls.some((c) => c.method === "POST" && c.path === "/v1/projects/p1/archive")).toBe(true));
   expect(calls.some((c) => c.method === "DELETE")).toBe(false);
   await vi.waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+});
+
+describe("opening a folder", () => {
+  const linked = { ...project("p3", "Course"), folder: "/Users/me/Course" };
+  const withFolder = {
+    ...routes,
+    "GET /v1/projects": { projects: [project("p1", "Calculus I", "math"), linked] },
+    "GET /v1/projects/:id": ({ params, query }: { params: Record<string, string>; query: URLSearchParams }) => ({
+      project: params.id === "p3" ? linked : project("p1", "Calculus I", "math"),
+      ...(query.get("counts") === "1" ? { counts: { chats: 0, plans: 0, outputs: 0, sources: params.id === "p3" ? 2 : 3 } } : {}),
+    }),
+    "GET /v1/projects/:id/plans": { plans: [] },
+    "POST /v1/projects": (req: { body: unknown }) => [201, { project: { ...project("p9", (req.body as { title: string }).title) } }],
+    "PUT /v1/projects/:id/folder": (req: { body: unknown }) => ({ project: { ...project("p9", "Notes"), folder: (req.body as { path: string }).path }, check: { folder: "/Users/me/Notes", added: ["a.md"], changed: [], missing: [], unchanged: 0, failed: [], skipped: 0, more: false } }),
+  };
+
+  beforeEach(() => forgetThisComputer());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    forgetThisComputer();
+  });
+
+  test("Home offers Open a folder first and New project beside it, nothing else; a folder project's card shows its folder and Synced, a hand-picked one its sources", async () => {
+    vi.stubGlobal("fetch", async () => Response.json({ in: true, as: "browser" }));
+    renderApp("/", withFolder);
+    const grid = (await screen.findByText("Calculus I")).closest(".grid")! as HTMLElement;
+    const open = await within(grid).findByRole("button", { name: "Open a folder" });
+    expect(grid.firstElementChild!.contains(open)).toBe(true);
+    expect(within(grid).getAllByRole("button").filter((b) => !b.closest(".pcw")).map((b) => b.textContent)).toEqual(["Open a folder", "New project"]);
+    const course = screen.getByText("Course").closest(".pc")! as HTMLElement;
+    expect(within(course).getByText("/Users/me/Course")).toBeInTheDocument();
+    expect(within(course).getByText("Synced")).toBeInTheDocument();
+    expect(within(course).queryByText(/sources?$/)).toBeNull();
+    const calculus = screen.getByText("Calculus I").closest(".pc")! as HTMLElement;
+    expect(within(calculus).getByTitle("3 sources")).toBeInTheDocument();
+    expect(within(calculus).queryByText("Synced")).toBeNull();
+  });
+
+  test("a typed folder becomes a project named from it and linked to it; a folder linked already opens its project", async () => {
+    vi.stubGlobal("fetch", async () => Response.json({ in: true, as: "browser" }));
+    const { calls } = renderApp("/", withFolder);
+    await userEvent.click(await screen.findByRole("button", { name: "Open a folder" }));
+    await userEvent.type(screen.getByRole("textbox", { name: "Folder to open" }), "/Users/me/Notes/");
+    await userEvent.click(screen.getByRole("button", { name: "Open" }));
+    await vi.waitFor(() => expect(calls.some((c) => c.method === "PUT" && c.path === "/v1/projects/p9/folder")).toBe(true));
+    expect(calls.find((c) => c.method === "POST" && c.path === "/v1/projects")!.body).toEqual({ title: "Notes" });
+    expect(calls.find((c) => c.method === "PUT")!.body).toEqual({ path: "/Users/me/Notes/" });
+  });
+
+  test("on a paired phone there is no Open a folder, only New project", async () => {
+    vi.stubGlobal("fetch", async () => Response.json({ in: true, as: "device" }));
+    renderApp("/", withFolder);
+    await screen.findByText("Calculus I");
+    await new Promise((done) => setTimeout(done, 20));
+    expect(screen.queryByRole("button", { name: "Open a folder" })).toBeNull();
+    expect(screen.getByRole("button", { name: "New project" })).toBeInTheDocument();
+  });
 });

@@ -4,7 +4,7 @@ More on each step of the session in `SKILL.md`, and what tends to go wrong. `ope
 
 ## Starting Open Sourcebook
 
-- `opensourcebook start --background` returns once every program answers, with the app's address. The launcher's own words go to `.opensourcebook/logs/launcher.log` in Open Sourcebook's folder, which is where to look when it does not start. `opensourcebook stop` stops it and everything it started.
+- `opensourcebook start --background` returns once every program answers, with the app's address. The launcher's own words go to `state/logs/launcher.log` in the app data folder (`~/Library/Application Support/Open Sourcebook` on a Mac, the same for the desktop app and every copy), which is where to look when it does not start. `opensourcebook stop` stops it and everything it started.
 - `opensourcebook start` without `--background` runs in the foreground until Ctrl-C. That suits a person at a terminal; from an agent session it would never return.
 - `opensourcebook start --ports-from <port>` uses ports from that one up, when the usual ones are taken.
 - `opensourcebook status` says whether each of Open Sourcebook's programs answers. `opensourcebook agent list` says whether the coding agents Open Sourcebook runs inside (the ones that write answers and make things) are installed and signed in, and what to run when one is not. If no agent is ready, nothing can be answered or made: tell the person what `opensourcebook agent list` says.

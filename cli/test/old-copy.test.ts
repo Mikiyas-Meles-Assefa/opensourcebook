@@ -43,7 +43,8 @@ test("the package names one command, opensourcebook, and the old command file is
   const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as { bin: Record<string, string>; scripts: Record<string, string> };
   assert.deepEqual(pkg.bin, { opensourcebook: `cli/${COMMAND_FILE}` });
   for (const script of ["start", "check", "status", "open", "update"]) assert.match(pkg.scripts[script]!, /^node cli\/opensourcebook\.mjs/, `npm run ${script}`);
-  const env = { PATH: process.env.PATH };
+  // A folder of its own: the real command never looks at the person's own app data folder from a test.
+  const env = { PATH: process.env.PATH, OPENSOURCEBOOK_APP_DATA: join(base, "app-data") };
   const now = spawnSync(process.execPath, [join(ROOT, "cli", COMMAND_FILE), "help"], { encoding: "utf8", env });
   const old = spawnSync(process.execPath, [join(ROOT, "cli", OLD_COMMAND_FILE), "help"], { encoding: "utf8", env });
   assert.equal(now.status, 0, now.stderr);

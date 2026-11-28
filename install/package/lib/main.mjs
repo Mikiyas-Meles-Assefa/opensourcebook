@@ -73,7 +73,7 @@ export async function install(d, flags) {
   const had = isInstalled(d.home);
   const shortcut = d.env.OPENSOURCEBOOK_NO_SHORTCUT === "1" ? "" : d.platform === "darwin" ? ", apart from an Open Sourcebook shortcut in your Applications folder" : d.platform === "linux" ? ", apart from an Open Sourcebook entry in your apps menu" : "";
   d.say(had ? `Open Sourcebook will be updated in ${d.home}, from ${d.archive}.` : `Open Sourcebook will be downloaded from ${d.archive} into ${d.home}.`);
-  d.say(`Nothing outside that folder is changed${shortcut}, and your projects in it are kept.`);
+  d.say(`Nothing outside that folder is changed${shortcut}, and your projects are kept.`);
   try {
     mkdirSync(d.home, { recursive: true });
   } catch (error) {
