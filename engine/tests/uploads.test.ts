@@ -114,7 +114,10 @@ describe("GET /v1/uploads/types and POST /v1/uploads agree", () => {
     expect(response.status).toBe(200);
     const body = (await bodyOf(response)) as { maxBytes: number; types: Array<{ contentType: string; extensions: string[]; group: string }> };
     expect(body.maxBytes).toBe(MAX_UPLOAD_BYTES);
-    expect(body.types).toEqual(UPLOAD_TYPES);
+    expect(body.types).toEqual(UPLOAD_TYPES.map(({ contentType, extensions, group }) => ({ contentType, extensions, group })));
+    // A linked folder takes the same endings, without sound and video.
+    expect((body as unknown as { folderExtensions: string[] }).folderExtensions).toEqual(expect.arrayContaining(["pdf", "md", "png"]));
+    expect((body as unknown as { folderExtensions: string[] }).folderExtensions.some((e) => ["mp3", "mp4", "mov", "wav"].includes(e))).toBe(false);
     expect([...new Set(body.types.map((type) => type.group))]).toEqual(["PDF", "slides", "docs", "spreadsheets", "images", "audio", "video"]);
     expect((await handleRequest(new Request("https://engine.test/v1/uploads/types"), engine.deps)).status).toBe(401);
   });
