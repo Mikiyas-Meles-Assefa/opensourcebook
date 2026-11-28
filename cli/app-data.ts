@@ -16,7 +16,7 @@
  * needs nothing but Node's own modules.
  */
 import { homedir } from "node:os";
-import { join, resolve, win32 } from "node:path";
+import { join, posix, resolve, win32 } from "node:path";
 
 export const APP_NAME = "Open Sourcebook";
 export const APP_DATA_ENV = "OPENSOURCEBOOK_APP_DATA";
@@ -33,9 +33,9 @@ export function appDataOf(env: NodeJS.ProcessEnv): string | undefined {
 export function appDataFolder(platform: NodeJS.Platform = process.platform, env: NodeJS.ProcessEnv = process.env, home = homedir()): string {
   const named = appDataOf(env);
   if (named) return named;
-  if (platform === "darwin") return join(home, "Library", "Application Support", APP_NAME);
+  if (platform === "darwin") return posix.join(home, "Library", "Application Support", APP_NAME);
   if (platform === "win32") return win32.join(env.APPDATA?.trim() || win32.join(home, "AppData", "Roaming"), APP_NAME);
-  return join(env.XDG_DATA_HOME?.trim() || join(home, ".local", "share"), APP_NAME);
+  return posix.join(env.XDG_DATA_HOME?.trim() || posix.join(home, ".local", "share"), APP_NAME);
 }
 
 /** The app data folder of this run when it is this system's usual one (chooseAppData), the only one a copy's old data is moved into. */

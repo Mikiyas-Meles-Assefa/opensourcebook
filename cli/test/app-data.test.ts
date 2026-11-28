@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { after, test } from "node:test";
 import { engineState, useAppData } from "../app-data.ts";
 import { PROGRAMS, type Wiring } from "../programs.ts";
@@ -59,8 +59,8 @@ test("every copy uses this system's own app data folder unless --data or the set
 
   const flag: NodeJS.ProcessEnv = { OPENSOURCEBOOK_APP_DATA: "/named" };
   const chosen = chooseAppData(["--no-open", "--data", "scratch", "--ports-from", "9100"], flag, "/work", "darwin", "/Users/ana");
-  assert.deepEqual(chosen, { argv: ["--no-open", "--ports-from", "9100"], root: join("/work", "scratch"), usual: false }, "--data wins over the setting and leaves the line");
-  assert.equal(flag.OPENSOURCEBOOK_APP_DATA, join("/work", "scratch"), "and is named for every program started from here");
+  assert.deepEqual(chosen, { argv: ["--no-open", "--ports-from", "9100"], root: resolve("/work", "scratch"), usual: false }, "--data wins over the setting and leaves the line");
+  assert.equal(flag.OPENSOURCEBOOK_APP_DATA, resolve("/work", "scratch"), "and is named for every program started from here");
   assert.throws(() => chooseAppData(["--data"], {}, "/work"), /--data takes a folder/);
 
   const named: NodeJS.ProcessEnv = { OPENSOURCEBOOK_APP_DATA: "/named", NODE_TEST_CONTEXT: "child" };
