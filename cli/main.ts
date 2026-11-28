@@ -14,6 +14,7 @@ import { newRunKeys } from "./opener.ts";
 import { join } from "node:path";
 import { gather, lines, render } from "./check.ts";
 import { CHROME_SIZE, downloadChrome, dropSecondCopy, findChrome } from "./chrome.ts";
+import { appDataOf, engineState, useAppData } from "./app-data.ts";
 import { databaseId, earlierDatabases, earlierLine, migrate, migrationFiles, needsMigrations, pastDatabaseIds, type Applied } from "./database.ts";
 import { build, buildFailed, isStale, planBuild, type Plan } from "./build.ts";
 import { install, installParts, linkedLine, linkedPackages, missingPackages, took, type Part } from "./install.ts";
@@ -46,10 +47,14 @@ export interface Options {
   rest: string[];
 }
 
-/** The door a phone comes in by, and the launcher's control of it on 127.0.0.1 (phone.ts). Not programs: the launcher runs them. */
-const PHONE_PORTS = [
+/**
+ * The door a phone comes in by and the launcher's control of it on 127.0.0.1 (phone.ts), and its answers to the engine
+ * about this computer's files (local-files.ts). Not programs: the launcher runs them.
+ */
+const LAUNCHER_PORTS = [
   { name: "phone", port: 5180 },
   { name: "phone-control", port: 5181 },
+  { name: "files", port: 5182 },
 ];
 
 export function parseArgs(argv: string[], env: NodeJS.ProcessEnv = process.env): Options {
@@ -221,7 +226,7 @@ async function startClaimed(options: Options): Promise<number> {
   await ensureChrome();
   if (!(await ensureDatabase())) return 1;
 
-  const wishes = [...PROGRAMS.flatMap((p) => [{ name: p.id, port: p.port }, ...(p.extraPorts ?? [])]), ...PHONE_PORTS].map((w, i) => (options.portsFrom ? { name: w.name, port: options.portsFrom + i } : w));
+  const wishes = [...PROGRAMS.flatMap((p) => [{ name: p.id, port: p.port }, ...(p.extraPorts ?? [])]), ...LAUNCHER_PORTS].map((w, i) => (options.portsFrom ? { name: w.name, port: options.portsFrom + i } : w));
   const ports = await pickPorts(wishes, undefined, claimPort);
   const moved = PROGRAMS.filter((p) => !options.portsFrom && ports[p.id] !== p.port);
   for (const p of moved) quiet(`  ${p.label}: port ${p.port} is already in use by something else, so Open Sourcebook uses ${ports[p.id]} instead.`);
@@ -240,7 +245,7 @@ async function startClaimed(options: Options): Promise<number> {
  * service's jobs) are made readable by that person only, like `.opensourcebook/`, wherever the copy of Open Sourcebook sits.
  */
 export function keepPrivate(root: string, env: NodeJS.ProcessEnv = process.env): void {
-  for (const dir of [join(root, "engine", ".wrangler"), env.SCENES_DATA_DIR?.trim() || join(root, "services", "scenes", ".data")]) {
+  for (const dir of [appDataOf(env) ? engineState(join(root, "engine"), env) : join(root, "engine", ".wrangler"), env.SCENES_DATA_DIR?.trim() || join(root, "services", "scenes", ".data"), ...(env.SCENES_JOBS_DIR?.trim() ? [env.SCENES_JOBS_DIR.trim()] : [])]) {
     try {
       mkdirSync(dir, { recursive: true, mode: 0o700 });
       chmodSync(dir, 0o700);
@@ -257,6 +262,8 @@ export function keepPrivate(root: string, env: NodeJS.ProcessEnv = process.env):
 export async function main(argv: string[]): Promise<number> {
   // Settings a person still has under their names from before the rename are read as the new ones from here on.
   carryOldNames(process.env);
+  // The desktop app names one folder for everything of the person's: state, the engine's data and the video jobs.
+  useAppData(process.env);
   const { runCommand } = await import("./commands/index.ts");
   return runCommand(argv);
 }
