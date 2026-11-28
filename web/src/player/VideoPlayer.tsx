@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Icon } from "../design/Icon";
-import { ProgressLine } from "./chrome";
+import { ChromeTools, ProgressLine } from "./chrome";
 import { mediaUrl } from "./media";
 import type { PlayerProps } from "./players";
 import { isNumber, progressField } from "./progress";
 import { useChrome } from "./useChrome";
-import { asVideo, sceneAt } from "./videoData";
+import { asVideo, sceneAt, videoFileName } from "./videoData";
 
 /**
  * A video (engine/docs/video.md, "Players"; docs/DECISIONS.md #49): the
@@ -107,6 +107,14 @@ export function VideoPlayer({ output, complete, active = true, autoplay = false,
 
   return (
     <div className="vstage">
+      {/* Saving the file is a tool in the chrome's bar, never something drawn over the video. */}
+      {src && (
+        <ChromeTools>
+          <a className="pc-ib" href={src} download={videoFileName(output.title)} aria-label="Download the video" title="Download the video">
+            <Icon name="download" />
+          </a>
+        </ChromeTools>
+      )}
       <div className="vscreen" style={{ "--shape": shape } as CSSProperties}>
         {src ? (
           <>

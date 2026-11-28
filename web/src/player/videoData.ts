@@ -124,3 +124,16 @@ function planned(scenes: Scene[]): VideoRender["scenes"] {
     return span;
   });
 }
+
+/** The name a downloaded video is saved under: its title, kept to what every file system takes. The scenes service always makes an MP4. */
+export function videoFileName(title: string): string {
+  const base = [...title.normalize("NFKC")]
+    .map((c) => (c.charCodeAt(0) < 32 || '\\/:*?"<>|'.includes(c) ? " " : c))
+    .join("")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^\.+/, "")
+    .slice(0, 120)
+    .trim();
+  return `${base || "video"}.mp4`;
+}

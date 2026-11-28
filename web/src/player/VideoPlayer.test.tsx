@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { JsonObject } from "../api/types";
 import { now } from "../test/fakeEngine";
 import { renderApp } from "../test/render";
-import { asVideo, sceneAt } from "./videoData";
+import { asVideo, sceneAt, videoFileName } from "./videoData";
 
 const scenes = [
   { id: "s1", kind: "question", durationMs: 5000, visual: { kind: "photo", description: "A clear blue sky." }, narration: "Why is the sky blue?", onScreenText: ["Why blue?"], cites: [] },
@@ -160,6 +160,31 @@ test("it says where the person is with the scene playing then, as soon as the fi
   // Past the last span, it is still the last scene.
   expect(sceneAt(asVideo({ scenes, render }), 99)).toBe("s2");
   expect(sceneAt(asVideo({ scenes }), 1)).toBeUndefined();
+});
+
+test("a video with a file can be downloaded from the bar, saved under its title", async () => {
+  const { container } = renderApp("/outputs/o1", routes());
+  await screen.findByLabelText("Video o1");
+  const link = await screen.findByRole("link", { name: "Download the video" });
+  expect(link).toHaveAttribute("href", "/api/v1/assets/a1");
+  expect(link).toHaveAttribute("download", "Video o1.mp4");
+  // In the chrome's bar, not over the video.
+  expect(container.querySelector(".vstage")!.contains(link)).toBe(false);
+  expect(container.querySelector(".pc-bar")!.contains(link)).toBe(true);
+});
+
+test("a video with no file has nothing to download", async () => {
+  renderApp("/outputs/o1", routes({ schemaVersion: 1, title: "Sky", scenes }));
+  await screen.findByText("This video has no file yet.");
+  expect(screen.queryByRole("link", { name: "Download the video" })).not.toBeInTheDocument();
+});
+
+test("a downloaded video's name is its title, safe for any file system", () => {
+  expect(videoFileName("Why the sky is blue")).toBe("Why the sky is blue.mp4");
+  expect(videoFileName("A/B: what? <now>")).toBe("A B what now.mp4");
+  expect(videoFileName("...hidden")).toBe("hidden.mp4");
+  expect(videoFileName("  ")).toBe("video.mp4");
+  expect(videoFileName("x".repeat(300))).toBe(`${"x".repeat(120)}.mp4`);
 });
 
 test("a dragged progress line moves the video on release", () => {

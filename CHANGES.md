@@ -18,6 +18,7 @@ The newest first. `opensourcebook update` prints the lines here that your copy d
 
 ## 2026-11-24
 
+- A video can be downloaded: the download button in the bar above it saves the file to your computer, named after the video's title.
 - Videos work on a copy installed with the one-line install. Before, every video failed at once with "Something went wrong while making this video", because the folder a video is made in sits inside `~/.opensourcebook` and was refused. Run `opensourcebook update` to get it; if you had set `SCENES_DATA_DIR` to get around it, you can keep it or take it out.
 - Videos have more styles to pick from: twelve instead of four, among them Comic, Neon, Whiteboard, Collage, Kinetic type, Textbook plate, Map and timeline and Documentary. Each shows its picture when you choose.
 - The iPhone app's code is now in one folder, `ios/`, under the name Open Sourcebook. If you build the app yourself, open `ios/OpenSourcebook.xcodeproj`, and move your own `Config/Local.xcconfig` to `ios/Config/Local.xcconfig`. Its ids did not change, so a build installs over the app you have.
