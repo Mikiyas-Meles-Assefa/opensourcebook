@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
 import type { Provider, ProviderPatch, Providers } from "../api/types";
+import { CopyButton } from "../design/Buttons";
 import { Icon } from "../design/Icon";
 import { ProviderMark } from "../design/ProviderMark";
 import { Switch } from "../design/ui";
@@ -160,10 +161,7 @@ function Command({ text }: { text: string }) {
   return (
     <div className="pv-cmd">
       <code>{text}</code>
-      <button className="mini" type="button" onClick={() => void navigator.clipboard?.writeText(text)}>
-        <Icon name="copy" />
-        Copy
-      </button>
+      <CopyButton text={text} />
     </div>
   );
 }

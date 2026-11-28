@@ -4,6 +4,7 @@ The newest first. `opensourcebook update` prints the lines here that your copy d
 
 ## 2026-11-28
 
+- A Copy button now shows it worked: it turns green with a check and says Copied for a moment.
 - A clone started with `npm start` now keeps your projects and settings in the same app data folder as the desktop app (`~/Library/Application Support/Open Sourcebook` on a Mac), so you see the same projects in both. The first start moves a clone's own folders there once when that folder has no projects yet; when it has some, nothing is moved and one line says which old folders you can delete. With both open they share one running copy, and quitting the desktop app leaves a clone's copy running. `--data <folder>` starts a private copy with its own projects.
 - Setting a video's reviewer to off now stops its fresh viewer turn, and a reviewer you picked watches the finished video on that agent, model and effort.
 

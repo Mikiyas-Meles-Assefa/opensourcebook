@@ -4,6 +4,7 @@ import { useApi, useAppData, useFormats, useProviders } from "../app/context";
 import { errorText, isApiError } from "../api/errors";
 import { Confirm } from "../app/Confirm";
 import { ErrorNotice, LoadState } from "../app/Status";
+import { CopyButton } from "../design/Buttons";
 import { Icon } from "../design/Icon";
 import { PlanCard, PlanUnderway } from "../plan/PlanCard";
 import { PlanProvider } from "../plan/PlanProvider";
@@ -1090,28 +1091,9 @@ export function Reply({
 
 /** Copies a whole reply as plain text: lists as lists, tables as rows, no cite numbers. */
 function CopyReply({ text }: { text: string }) {
-  const [done, setDone] = useState(false);
-  useEffect(() => {
-    if (!done) return;
-    const timer = setTimeout(() => setDone(false), 1500);
-    return () => clearTimeout(timer);
-  }, [done]);
   return (
     <div className="replytools" data-copy="skip">
-      <button
-        type="button"
-        className="mini ghost"
-        aria-label="Copy reply"
-        onClick={() => {
-          void navigator.clipboard?.writeText(text).then(
-            () => setDone(true),
-            () => undefined,
-          );
-        }}
-      >
-        <Icon name={done ? "check" : "copy"} />
-        {done ? "Copied" : "Copy"}
-      </button>
+      <CopyButton text={text} label="Copy reply" className="ghost" />
     </div>
   );
 }

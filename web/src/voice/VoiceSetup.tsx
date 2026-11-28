@@ -3,6 +3,7 @@ import { errorText, isApiError } from "../api/errors";
 import type { VoiceOption, VoiceServiceView, VoiceSetup as Setup } from "../api/types";
 import { useApi } from "../app/context";
 import { useLoad } from "../app/useLoad";
+import { CopyButton } from "../design/Buttons";
 import { Icon } from "../design/Icon";
 import { Segmented } from "../design/ui";
 import { serviceReady as ready } from "./ready";
@@ -326,10 +327,7 @@ function LocalSetup({ service: s, checking, onCheck }: { service: VoiceServiceVi
           <p className="vs-d">Or run this once in a terminal{s.install.folder ? <>, in <code>{s.install.folder}</code></> : ""}, then check again:</p>
           <div className="vs-cmd">
             <code>{s.install.command}</code>
-            <button className="mini" type="button" onClick={() => void navigator.clipboard?.writeText(s.install!.command)}>
-              <Icon name="copy" />
-              Copy
-            </button>
+            <CopyButton text={s.install.command} />
           </div>
         </>
       )}
