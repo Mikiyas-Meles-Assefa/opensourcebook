@@ -2,6 +2,10 @@
 
 The newest first. `opensourcebook update` prints the lines here that your copy did not have yet, so each line is written for a person using Open Sourcebook: what they can now do or will notice, in a sentence. How to add one is in `CONTRIBUTING.md`.
 
+## 2026-11-28
+
+- Setting a video's reviewer to off now stops its fresh viewer turn, and a reviewer you picked watches the finished video on that agent, model and effort.
+
 ## 2026-11-26
 
 - Open Sourcebook no longer slows your computer down while it reads a web page, and videos play without pausing every few seconds. The engine had kept trying to download a whole browser (about 150 MB) in the background, and every video seek read the whole video file again; now pages are read without that browser and a video sends only the part being played. Run `opensourcebook update` to get it.
