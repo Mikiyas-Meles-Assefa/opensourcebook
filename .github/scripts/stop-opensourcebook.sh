@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Ctrl-C to the running launcher, then: it is gone, and nothing it started is left. Usage: stop-opensourcebook.sh <its log>
 set -u
-pid=$(node -p 'JSON.parse(require("fs").readFileSync(".opensourcebook/running.json","utf8")).pid')
+pid=$(node -p 'JSON.parse(require("fs").readFileSync(require("path").join(process.env.OPENSOURCEBOOK_APP_DATA,"state","running.json"),"utf8")).pid')
 kill -INT "$pid"
 for i in $(seq 1 20); do kill -0 "$pid" 2>/dev/null || break; sleep 1; done
 tail -3 "$1"

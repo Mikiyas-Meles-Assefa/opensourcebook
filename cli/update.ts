@@ -83,7 +83,7 @@ export function locate(root: string, git: Git = gitIn(root)): Checkout {
   if (!top.ok || real(top.out) !== real(root)) {
     throw new Refusal(
       "not_a_checkout",
-      `This Open Sourcebook folder (${root}) is not a git checkout, so opensourcebook update has nothing to fetch from and changed nothing. To get updates, clone Open Sourcebook with git (docs/DEVELOPING.md) and move your .opensourcebook folder and engine/.wrangler folder across; they hold your settings and your projects.`,
+      `This Open Sourcebook folder (${root}) is not a git checkout, so opensourcebook update has nothing to fetch from and changed nothing. To get updates, clone Open Sourcebook with git (docs/DEVELOPING.md); your settings and projects are in the app data folder every copy on this computer shares, so the clone finds them (a start moves a folder this copy kept them in there once).`,
     );
   }
   const current = git(["symbolic-ref", "--short", "-q", "HEAD"]);

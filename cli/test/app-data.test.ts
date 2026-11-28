@@ -49,3 +49,28 @@ test("without one, everything stays where a clone always kept it, and a setting 
   assert.equal(named.SCENES_JOBS_DIR, undefined);
   assert.equal(named.OPENSOURCEBOOK_STATE, join(data, "state"));
 });
+
+test("every copy uses this system's own app data folder unless --data or the setting names another, and a test must name its own", async () => {
+  const { appDataFolder, chooseAppData, usualAppData } = await import("../app-data.ts");
+  assert.equal(appDataFolder("darwin", {}, "/Users/ana"), "/Users/ana/Library/Application Support/Open Sourcebook");
+  assert.equal(appDataFolder("linux", {}, "/home/ana"), "/home/ana/.local/share/Open Sourcebook");
+  assert.equal(appDataFolder("linux", { XDG_DATA_HOME: "/data" }, "/home/ana"), "/data/Open Sourcebook");
+  assert.equal(appDataFolder("win32", { APPDATA: "C:\\Users\\ana\\AppData\\Roaming" }, "C:\\Users\\ana"), "C:\\Users\\ana\\AppData\\Roaming\\Open Sourcebook");
+
+  const flag: NodeJS.ProcessEnv = { OPENSOURCEBOOK_APP_DATA: "/named" };
+  const chosen = chooseAppData(["--no-open", "--data", "scratch", "--ports-from", "9100"], flag, "/work", "darwin", "/Users/ana");
+  assert.deepEqual(chosen, { argv: ["--no-open", "--ports-from", "9100"], root: join("/work", "scratch"), usual: false }, "--data wins over the setting and leaves the line");
+  assert.equal(flag.OPENSOURCEBOOK_APP_DATA, join("/work", "scratch"), "and is named for every program started from here");
+  assert.throws(() => chooseAppData(["--data"], {}, "/work"), /--data takes a folder/);
+
+  const named: NodeJS.ProcessEnv = { OPENSOURCEBOOK_APP_DATA: "/named", NODE_TEST_CONTEXT: "child" };
+  assert.deepEqual(chooseAppData(["status"], named, "/work", "darwin", "/Users/ana"), { argv: ["status"], root: "/named", usual: false });
+  assert.equal(usualAppData(), undefined, "a named folder is never the one old data is moved into");
+
+  assert.throws(() => chooseAppData([], { NODE_TEST_CONTEXT: "child-v8" }, "/work", "darwin", "/Users/ana"), /A test never uses the person's real app data folder/);
+
+  const plain: NodeJS.ProcessEnv = {};
+  assert.deepEqual(chooseAppData(["--ports-from", "9100"], plain, "/work", "darwin", "/Users/ana"), { argv: ["--ports-from", "9100"], root: "/Users/ana/Library/Application Support/Open Sourcebook", usual: true }, "--ports-from alone never changes where the data is");
+  assert.equal(plain.OPENSOURCEBOOK_APP_DATA, "/Users/ana/Library/Application Support/Open Sourcebook");
+  assert.equal(usualAppData(), "/Users/ana/Library/Application Support/Open Sourcebook");
+});

@@ -3,6 +3,8 @@
  * group is one file in this folder and one entry in GROUPS.
  */
 import { join } from "node:path";
+import { usualAppData } from "../app-data.ts";
+import { settleOldData } from "../old-data.ts";
 import { stateFolder } from "../state.ts";
 import { agents, makers, styles } from "./makers.ts";
 import { backup } from "./backup.ts";
@@ -49,7 +51,13 @@ export function defaultIo(): Io {
     root: ROOT,
     // Where the state is now, moving nothing: only a start gives an old folder its new name (settle).
     home: stateFolder(ROOT, process.env),
-    settle: (say) => stateFolder(ROOT, process.env, { settle: true, say }),
+    settle: (say) => {
+      // A copy's own folders from before every copy shared the app data folder are moved in first, once (old-data.ts).
+      const usual = usualAppData();
+      const refused = usual ? settleOldData(ROOT, usual, { say }) : undefined;
+      if (refused) throw new Problem("old_copy_running", refused);
+      return stateFolder(ROOT, process.env, { settle: true, say });
+    },
     pollMs: 1000,
   };
 }

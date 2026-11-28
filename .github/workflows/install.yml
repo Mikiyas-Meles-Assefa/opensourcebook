@@ -70,7 +70,7 @@ jobs:
             apt-get update -qq && apt-get install -y -qq curl ca-certificates procps >/dev/null
             useradd -m jane
             su jane -c "cd ~ && sh /in/install/test/try.sh /in/app.tar.gz /in/package.tgz 9300" || {
-              echo; echo "--- the logs"; tail -n 60 /home/jane/.opensourcebook/app/.opensourcebook/logs/*.log 2>/dev/null || true; exit 1; }
+              echo; echo "--- the logs"; tail -n 60 "/home/jane/.local/share/Open Sourcebook/state/logs/"*.log 2>/dev/null || true; exit 1; }
           '
 
   windows:
@@ -120,7 +120,7 @@ jobs:
       - name: The line a second time updates and starts again, and what the person made is kept
         timeout-minutes: 15
         run: |
-          $kept = "$env:USERPROFILE\.opensourcebook\app\.opensourcebook\try-kept.txt"
+          $kept = "$env:USERPROFILE\.opensourcebook\app\try-kept.txt"
           Set-Content -Path $kept -Value kept
           Get-Content -Raw install\site\install.ps1 | Invoke-Expression
           if ($LASTEXITCODE) { exit 1 }
@@ -137,4 +137,4 @@ jobs:
           if (Test-Path $cmd) { & $cmd stop }
       - name: Logs
         if: failure()
-        run: Get-ChildItem "$env:USERPROFILE\.opensourcebook\app\.opensourcebook\logs\*.log" -ErrorAction SilentlyContinue | ForEach-Object { "--- $($_.Name)"; Get-Content $_ -Tail 60 }
+        run: Get-ChildItem "$env:APPDATA\Open Sourcebook\state\logs\*.log" -ErrorAction SilentlyContinue | ForEach-Object { "--- $($_.Name)"; Get-Content $_ -Tail 60 }

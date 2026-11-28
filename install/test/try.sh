@@ -65,9 +65,9 @@ step "Each of the four programs answers"
 four_up || fail "not every program answers after the first run"
 
 step "The line a second time: it updates and starts again, and what the person made is kept"
-echo kept > "$home/app/.opensourcebook/try-kept.txt"
+echo kept > "$home/app/try-kept.txt"
 the_line || fail "the second run of the line did not finish"
-[ "$(cat "$home/app/.opensourcebook/try-kept.txt" 2>/dev/null)" = kept ] || fail "the second run removed a file the person made"
+[ "$(cat "$home/app/try-kept.txt" 2>/dev/null)" = kept ] || fail "the second run removed a file the person made"
 four_up || fail "not every program answers after the second run"
 
 step "Stopping"

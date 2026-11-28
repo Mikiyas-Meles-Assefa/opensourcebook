@@ -55,6 +55,8 @@ jobs:
             web/package-lock.json
             services/agent-connector/package-lock.json
             services/scenes/package-lock.json
+      - name: A scratch app data folder for this run, never the runner's own
+        run: echo "OPENSOURCEBOOK_APP_DATA=$RUNNER_TEMP/app-data" >> "$GITHUB_ENV"
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - run: npm run check
       - name: Start Open Sourcebook and ask each program if it is up
@@ -71,7 +73,7 @@ jobs:
           npm run status
           # The engine's and the web app's own processes: the runtime and its runner, no dev server, watcher or bundler.
           for id in engine web; do
-            group=$(node -p "JSON.parse(require('fs').readFileSync('.opensourcebook/running.json','utf8')).children.find((c) => c.id === '$id').pid")
+            group=$(node -p "JSON.parse(require('fs').readFileSync(require('path').join(process.env.OPENSOURCEBOOK_APP_DATA,'state','running.json'),'utf8')).children.find((c) => c.id === '$id').pid")
             ps -eo pgid=,args= | awk -v g="$group" '$1 == g' | tee "$id.ps"
             if grep -E "wrangler.js dev|scripts/dev.ts|vite.js|esbuild" "$id.ps"; then echo "$id runs a dev server, a watcher or a bundler"; exit 1; fi
           done
@@ -105,4 +107,4 @@ jobs:
           .github/scripts/stop-opensourcebook.sh dev.log
       - name: Logs
         if: failure()
-        run: tail -n 40 .opensourcebook/logs/*.log || true
+        run: tail -n 40 "$OPENSOURCEBOOK_APP_DATA"/state/logs/*.log || true

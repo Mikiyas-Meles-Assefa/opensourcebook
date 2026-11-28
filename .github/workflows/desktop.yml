@@ -5,11 +5,13 @@ on:
     paths:
       - "desktop/**"
       - "install/package/lib/**"
+      - "cli/app-data.ts"
       - ".github/workflows/desktop.yml"
   pull_request:
     paths:
       - "desktop/**"
       - "install/package/lib/**"
+      - "cli/app-data.ts"
       - ".github/workflows/desktop.yml"
 
 jobs:

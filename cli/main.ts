@@ -5,16 +5,17 @@
  *   opensourcebook <thing> <action>    every other command, from the table in commands/ (`opensourcebook help` lists them; the paired
  *                                      devices are `opensourcebook device`, from commands/devices.ts)
  *
- * Everything the launcher keeps lives in the state folder, `.opensourcebook/` at the repo root (git-ignored): the
- * secrets, the engine's settings file, what it set up, and a log per program. Where that folder is, and how one from
- * before the rename is found, is state.ts.
+ * Everything the launcher keeps lives in the state folder, `state/` in the app data folder (app-data.ts), the same one
+ * the desktop app uses: the secrets, the engine's settings file, what it set up, and a log per program. A copy's own
+ * folders from before that (`.opensourcebook/` at the repo root and the rest) are moved there once (old-data.ts).
  */
 import { chmodSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { newRunKeys } from "./opener.ts";
 import { join } from "node:path";
 import { gather, lines, render } from "./check.ts";
 import { CHROME_SIZE, downloadChrome, dropSecondCopy, findChrome } from "./chrome.ts";
-import { appDataOf, engineState, useAppData } from "./app-data.ts";
+import { appDataOf, chooseAppData, engineState, usualAppData, useAppData } from "./app-data.ts";
+import { settleOldData } from "./old-data.ts";
 import { databaseId, earlierDatabases, earlierLine, migrate, migrationFiles, needsMigrations, pastDatabaseIds, type Applied } from "./database.ts";
 import { build, buildFailed, isStale, planBuild, type Plan } from "./build.ts";
 import { install, installParts, linkedLine, linkedPackages, missingPackages, took, type Part } from "./install.ts";
@@ -203,6 +204,13 @@ export async function start(options: Options): Promise<number> {
     say(`An Open Sourcebook that is gone left its programs running (${left.map((c) => `${c.id} ${c.pid}`).join(", ")}). Run "opensourcebook stop" to stop those, then start again.`);
     return 1;
   }
+  // Nothing is running on the app data folder: this copy's own folders from before it was shared are moved in, once.
+  const usual = usualAppData();
+  const refused = usual ? settleOldData(ROOT, usual, { say }) : undefined;
+  if (refused) {
+    say(refused);
+    return 1;
+  }
   // Nothing of this copy is running, so a folder from before the rename takes its new name now, in one step.
   HOME = stateFolder(ROOT, process.env, { settle: true, say });
   // Claimed at once, so a second start in this folder sees it while this one checks and installs.
@@ -262,8 +270,10 @@ export function keepPrivate(root: string, env: NodeJS.ProcessEnv = process.env):
 export async function main(argv: string[]): Promise<number> {
   // Settings a person still has under their names from before the rename are read as the new ones from here on.
   carryOldNames(process.env);
-  // The desktop app names one folder for everything of the person's: state, the engine's data and the video jobs.
+  // One folder for everything of the person's, the same for every copy on this computer: state, the engine's data and
+  // the video jobs (app-data.ts). The desktop app names it; --data names another; else it is the system's usual place.
+  const chosen = chooseAppData(argv, process.env);
   useAppData(process.env);
   const { runCommand } = await import("./commands/index.ts");
-  return runCommand(argv);
+  return runCommand(chosen.argv);
 }

@@ -107,19 +107,24 @@ export const run: Group = {
         { name: "no-phone", help: "listen on this computer only again (the default; remembered)" },
         { name: "ports-from", value: "port", help: "use ports from this one up instead of each program's usual one" },
         { name: "dev", help: "for working on Open Sourcebook: the watching dev servers, which reload when a file changes, instead of the builds" },
+        { name: "data", value: "folder", help: "keep projects and settings in this folder instead of the app's usual one (a private copy to try things in; read before anything else, by every command)" },
         TIMEOUT_FLAG,
       ],
-      shape: "{ url: string, pid: number, already: boolean, log?: string, newer?: boolean }",
-      more: "The first start installs each program's packages and takes a few minutes, and the first start after each update builds Open Sourcebook once (seconds; later starts reuse the build). With --background the launcher's own words go to .opensourcebook/logs/launcher.log and this command returns once Open Sourcebook answers.",
+      shape: "{ url: string, pid: number, already: boolean, root?: string, log?: string, newer?: boolean }",
+      more: "Every copy on this computer (the desktop app, the one-line install, a clone) keeps its projects in the same app data folder, so a start while another copy runs opens that one instead of starting a second; `root` says which folder it runs from. The first start installs each program's packages and takes a few minutes, and the first start after each update builds Open Sourcebook once (seconds; later starts reuse the build). With --background the launcher's own words go to logs/launcher.log in the state folder and this command returns once Open Sourcebook answers.",
       async run(ctx) {
         mustBeThisCopy(ctx, "start");
         const running = findLauncher(ctx.home);
         if (running) {
-          if (running.ready === false) return { data: { url: running.url, pid: running.pid, already: true }, text: `Open Sourcebook is already starting (process ${running.pid}); "opensourcebook status" says when it answers.` };
+          // Another copy on this computer (the desktop app, or a clone) that shares the app data folder counts the same:
+          // its engine already has the database, so this one opens it and never starts a second.
+          const root = running.root ? { root: running.root } : {};
+          const whose = running.root && real(running.root) !== real(ctx.root) ? `, started from ${running.root}` : "";
+          if (running.ready === false) return { data: { url: running.url, pid: running.pid, already: true, ...root }, text: `Open Sourcebook is already starting (process ${running.pid}${whose}); "opensourcebook status" says when it answers.` };
           // Started again while it runs (its shortcut clicked again, or a tab left from an earlier run): a fresh page in the browser, as "opensourcebook open" does.
           const show = !ctx.json && !flagOn(ctx, "no-open") && !flagOn(ctx, "background");
           const opened = show ? await browserAddress(ctx, "/").then((entry) => openUrl(ctx, entry), () => false) : false;
-          return { data: { url: running.url, pid: running.pid, already: true, ...(opened ? { opened } : {}) }, text: `Open Sourcebook is already running at ${running.url}.${opened ? " It is opened in the browser again." : ""}` };
+          return { data: { url: running.url, pid: running.pid, already: true, ...root, ...(opened ? { opened } : {}) }, text: `Open Sourcebook is already running at ${running.url}${whose}.${opened ? " It is opened in the browser again." : ""}` };
         }
         const portsFrom = portsFlag(ctx);
         const launcherArgs = [...(flagOn(ctx, "no-open") || flagOn(ctx, "background") ? ["--no-open"] : []), ...(portsFrom ? ["--ports-from", String(portsFrom)] : []), ...(flagOn(ctx, "phone") ? ["--phone"] : []), ...(flagOn(ctx, "no-phone") ? ["--no-phone"] : []), ...(flagOn(ctx, "dev") ? ["--dev"] : [])];
