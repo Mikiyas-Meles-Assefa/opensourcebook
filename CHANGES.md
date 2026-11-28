@@ -6,7 +6,7 @@ The newest first. `opensourcebook update` prints the lines here that your copy d
 
 - On Windows, setup now shows the Windows install line for each agent instead of the Mac and Linux one; an agent with no Windows line shows its install page instead.
 
- ## 2026-11-26
+## 2026-11-26
 
 - Open Sourcebook no longer slows your computer down while it reads a web page, and videos play without pausing every few seconds. The engine had kept trying to download a whole browser (about 150 MB) in the background, and every video seek read the whole video file again; now pages are read without that browser and a video sends only the part being played. Run `opensourcebook update` to get it.
 
