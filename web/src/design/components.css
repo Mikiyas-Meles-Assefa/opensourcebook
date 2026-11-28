@@ -227,6 +227,9 @@ h2 { margin: 0; font-size: var(--fs-body); line-height: var(--lh-body); letter-s
 .mini:hover { color: var(--primaryText); border-color: var(--primarySoft); }
 .mini.on, .mini[aria-pressed="true"] { background: var(--primarySoft); border-color: var(--primarySoft); color: var(--primaryText); }
 .mini.go { background: var(--primary); border-color: var(--primary); color: var(--onPrimary); }
+.copybtn.copied { background: var(--successSoft); border-color: var(--successSoft); color: var(--successText); }
+.copybtn.copied .ico { animation: copy-pop 220ms ease-out; }
+@keyframes copy-pop { 0% { transform: scale(0.5); opacity: 0; } 70% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(1); } }
 .mini.go:hover { opacity: .92; color: var(--onPrimary); }
 .mini.ask { background: var(--accentSoft); border-color: var(--accentBorder); color: var(--accentText); }
 .mini .ico { width: 12px; height: 12px; }

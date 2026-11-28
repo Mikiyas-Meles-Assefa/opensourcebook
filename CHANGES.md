@@ -4,6 +4,7 @@ The newest first. `opensourcebook update` prints the lines here that your copy d
 
 ## 2026-11-28
 
+- A Copy button now shows it worked: it turns green with a check and says Copied for a moment.
 - Setting a video's reviewer to off now stops its fresh viewer turn, and a reviewer you picked watches the finished video on that agent, model and effort.
 
 ## 2026-11-27
